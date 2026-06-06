@@ -17,16 +17,18 @@ clock = pygame.time.Clock()
 # ---------------------------------------------------------
 FIXED_FPS = 60
 
-BATTLE_BAND_HEIGHT = 400
-BATTLE_ANIM_FRAMES = 10   # 黒帯が開ききるまでのフレーム数
+# バトルメインウィンドウ（旧：黒帯）
+BATTLE_MAIN_WINDOW_HEIGHT = 400
+BATTLE_MAIN_WINDOW_ANIM_FRAMES = 10   # バトルメインウィンドウが開ききるまでのフレーム数
 
 # ヒロイン演出パラメータ
 BATTLE_HEROINE_FIRST_SCALE = 3.6     # 画面高さの何倍にするか
 BATTLE_HEROINE_FIRST_FOCUS = 0.10    # 下端から高さの何倍の位置を画面中央にするか
 BATTLE_HEROINE_SECOND_FOCUS = 0.80   # SECOND段階の注視点
 
-BATTLE_HEROINE_FOCUS_DELAY_FRAMES = 20   # ★ 黒帯が開ききってから注視点移動を開始するまでの静止フレーム
-BATTLE_HEROINE_FOCUS_FRAMES = 60        # FIRST → SECOND に移動するフレーム数
+# バトルメインウィンドウ開いた後の静止 → カメラ上昇
+BATTLE_HEROINE_FOCUS_DELAY_FRAMES = 20   # 静止フレーム
+BATTLE_HEROINE_FOCUS_FRAMES = 60         # FIRST → SECOND に移動するフレーム数
 
 # ---------------------------------------------------------
 # ゲーム状態
@@ -320,17 +322,17 @@ def update(dt):
 
     if game_state == STATE_BATTLE:
 
-        # ① 黒帯アニメ
-        if battle_anim_frame < BATTLE_ANIM_FRAMES:
+        # ① バトルメインウィンドウ開くアニメ
+        if battle_anim_frame < BATTLE_MAIN_WINDOW_ANIM_FRAMES:
             battle_anim_frame += 1
             return
 
-        # ② 静止フレーム
+        # ② 静止フレーム（ハイヒール見せ時間）
         if heroine_focus_delay_frame < BATTLE_HEROINE_FOCUS_DELAY_FRAMES:
             heroine_focus_delay_frame += 1
             return
 
-        # ③ 注視点移動
+        # ③ 注視点移動（背中 → 肩）
         if heroine_focus_frame < BATTLE_HEROINE_FOCUS_FRAMES:
             heroine_focus_frame += 1
             return
@@ -367,7 +369,8 @@ def render_field():
     for (mx, my), color in tile_map.items():
         wx = mx * TILE_SIZE_M
         wy = my * TILE_SIZE_M
-        sx, sy = world_to_screen(wx, wy)
+        sx = (wx - camera_world_x) * METER_TO_PIXEL * zoom + SCREEN_W // 2
+        sy = (wy - camera_world_y) * METER_TO_PIXEL * zoom + SCREEN_H // 2
         rect = pygame.Rect(sx, sy, tile_size_px(), tile_size_px())
         pygame.draw.rect(screen, color, rect)
 
@@ -396,13 +399,13 @@ def render_field():
 def render_battle():
     render_field()
 
-    # ★ 黒帯アニメ進行度（0.0～1.0）
-    progress = min(1.0, battle_anim_frame / BATTLE_ANIM_FRAMES)
-    current_height = int(BATTLE_BAND_HEIGHT * progress)
+    # ★ バトルメインウィンドウ開くアニメ進行度（0.0～1.0）
+    progress = min(1.0, battle_anim_frame / BATTLE_MAIN_WINDOW_ANIM_FRAMES)
+    current_height = int(BATTLE_MAIN_WINDOW_HEIGHT * progress)
 
     band_y = SCREEN_H//2 - current_height//2
 
-    # 黒帯
+    # バトルメインウィンドウ
     overlay = pygame.Surface((SCREEN_W, current_height))
     overlay.fill((0, 0, 0))
     screen.blit(overlay, (0, band_y))
@@ -428,7 +431,7 @@ def render_battle():
 
         img_rect = img.get_rect(midbottom=(SCREEN_W//2, bottom_y))
 
-        # 黒帯内にクリップ
+        # バトルメインウィンドウ内にクリップ
         clip_rect = pygame.Rect(0, band_y, SCREEN_W, current_height)
         screen.set_clip(clip_rect)
         screen.blit(img, img_rect)
