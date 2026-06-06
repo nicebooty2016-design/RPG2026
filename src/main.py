@@ -26,7 +26,7 @@ ZOOM_STEP = 0.1
 zoom = 1.0
 
 # ---------------------------------------------------------
-# カメラオフセット（キャラより何m上に置くか）
+# カメラオフセット
 # ---------------------------------------------------------
 CAMERA_Y_OFFSET_M = -0.25
 
@@ -49,7 +49,7 @@ def tile_size_px():
     return int(TILE_SIZE_M * METER_TO_PIXEL * zoom)
 
 # ---------------------------------------------------------
-# ワールド座標（キャラ & カメラ）
+# ワールド座標
 # ---------------------------------------------------------
 player_world_x = 0.0
 player_world_y = 0.0
@@ -61,10 +61,10 @@ camera_world_y = 10.0
 # キャラ移動速度（秒速2m）
 # ---------------------------------------------------------
 player_speed_mps = 2.0
-player_speed = player_speed_mps / 60.0
+player_speed = player_speed_mps / 60.0  # 60FPSに合わせる
 
 # ---------------------------------------------------------
-# タイルマップ（ワールド座標 -16 ～ +16）
+# タイルマップ
 # ---------------------------------------------------------
 TILE_MIN = -16
 TILE_MAX = 16
@@ -73,7 +73,7 @@ TILE_TYPES = {
     "grass": (80, 200, 80),
     "sand": (210, 180, 80),
     "forest": (20, 120, 20),
-    "mountain": (120, 120, 120),  # 衝突対象
+    "mountain": (120, 120, 120),
 }
 TILE_LIST = list(TILE_TYPES.values())
 
@@ -107,11 +107,11 @@ def load_walk_images():
 walk_images = []
 frame_index = 0
 frame_timer = 0
-FRAME_INTERVAL = 12
+FRAME_INTERVAL = 1  # 60FPS用
 last_image = None
 
 # ---------------------------------------------------------
-# ワールド座標 → スクリーン座標（ズーム対応）
+# ワールド座標 → スクリーン座標
 # ---------------------------------------------------------
 def world_to_screen(wx, wy):
     sx = (wx - camera_world_x) * METER_TO_PIXEL * zoom + SCREEN_W // 2
@@ -119,7 +119,7 @@ def world_to_screen(wx, wy):
     return int(sx), int(sy)
 
 # ---------------------------------------------------------
-# 周囲8タイルに山があるかチェック（コライダ色用）
+# 周囲に山があるか
 # ---------------------------------------------------------
 def is_near_mountain(px, py):
     mx = math.floor(px / TILE_SIZE_M)
@@ -140,8 +140,7 @@ def resolve_collision(px, py):
     mx = math.floor(px / TILE_SIZE_M)
     my = math.floor(py / TILE_SIZE_M)
 
-    # 複数タイルと重なっている可能性があるので、数回繰り返して解消
-    for _ in range(4):
+    for _ in range(4):  # 最大4回押し出し
         collided = False
 
         for ty in range(my - 1, my + 2):
@@ -159,25 +158,21 @@ def resolve_collision(px, py):
                 cx = px
                 cy = py
 
-                # 円のAABB（近似）
                 circle_left   = cx - r
                 circle_right  = cx + r
                 circle_top    = cy - r
                 circle_bottom = cy + r
 
-                # AABB同士の重なりチェック
                 if circle_right <= left or circle_left >= right:
                     continue
                 if circle_bottom <= top or circle_top >= bottom:
                     continue
 
-                # 各方向のめり込み量
-                overlap_left   = circle_right - left      # 左側から押し返される量
-                overlap_right  = right - circle_left      # 右側から押し返される量
-                overlap_top    = circle_bottom - top      # 上から
-                overlap_bottom = bottom - circle_top      # 下から
+                overlap_left   = circle_right - left
+                overlap_right  = right - circle_left
+                overlap_top    = circle_bottom - top
+                overlap_bottom = bottom - circle_top
 
-                # 最小のめり込み方向に押し出す
                 min_overlap = min(overlap_left, overlap_right,
                                   overlap_top, overlap_bottom)
 
@@ -191,8 +186,6 @@ def resolve_collision(px, py):
                     py += overlap_bottom
 
                 collided = True
-
-                # 押し出したので、次のループでは新しい位置で再判定
                 mx = math.floor(px / TILE_SIZE_M)
                 my = math.floor(py / TILE_SIZE_M)
 
@@ -215,7 +208,7 @@ def initialize():
     walk_images = load_walk_images()
     last_image = walk_images[0]
 
-    # 初期位置が山にめり込んでいても押し出す
+    # 初期めり込みを押し出し
     player_world_x, player_world_y = resolve_collision(player_world_x, player_world_y)
 
 # ---------------------------------------------------------
@@ -268,19 +261,18 @@ def update(dt):
     global frame_timer, frame_index, last_image
     global player_world_x, player_world_y
 
-    # アニメーション更新
     if moving:
-        frame_timer += dt
+        frame_timer += 1
         if frame_timer >= FRAME_INTERVAL:
             frame_timer = 0
             frame_index = (frame_index + 1) % len(walk_images)
             last_image = walk_images[frame_index]
 
-    # まず X/Y 同時に移動
+    # X/Y 同時移動
     player_world_x += move_x
     player_world_y += move_y
 
-    # その後、山タイルから押し出す
+    # 押し出し
     player_world_x, player_world_y = resolve_collision(player_world_x, player_world_y)
 
 # ---------------------------------------------------------
@@ -308,39 +300,44 @@ def render():
     rect = last_image.get_rect(midbottom=(sx, sy))
     screen.blit(last_image, rect)
 
-    text = f"({player_world_x:.1f}, {player_world_y:.1f})"
-    img_text = font.render(text, True, (255, 255, 255))
-    screen.blit(img_text, (sx - img_text.get_width() // 2, sy - 10))
+    # ---------------------------------------------------------
+    # デバッグ表示
+    # ---------------------------------------------------------
+    pos_text = f"Player: ({player_world_x:.2f}, {player_world_y:.2f})"
+    screen.blit(font.render(pos_text, True, (255, 255, 255)), (10, 10))
 
-    cam_text = f"Camera: ({camera_world_x:.1f}, {camera_world_y:.1f})"
-    cam_img = font.render(cam_text, True, (255, 255, 0))
-    screen.blit(cam_img, (10, 10))
+    cam_text = f"Camera: ({camera_world_x:.2f}, {camera_world_y:.2f})"
+    screen.blit(font.render(cam_text, True, (255, 255, 0)), (10, 30))
 
     zoom_text = f"Zoom: {zoom:.2f}"
-    zoom_img = font.render(zoom_text, True, (0, 200, 255))
-    screen.blit(zoom_img, (10, 30))
+    screen.blit(font.render(zoom_text, True, (0, 200, 255)), (10, 50))
 
-    # コライダ可視化（周囲に山があれば黄色、なければ青）
+    fps_text = f"FPS: {clock.get_fps():.1f}"
+    screen.blit(font.render(fps_text, True, (255, 255, 255)), (10, 70))
+
+    # ---------------------------------------------------------
+    # コライダ可視化
+    # ---------------------------------------------------------
     collider_px = int(PLAYER_COLLIDER_RADIUS * METER_TO_PIXEL * zoom)
     cx, cy = world_to_screen(player_world_x, player_world_y)
 
     if is_near_mountain(player_world_x, player_world_y):
-        color = (255, 255, 0)  # 黄色
+        color = (255, 255, 0)
     else:
-        color = (0, 128, 255)  # 青
+        color = (0, 128, 255)
 
     pygame.draw.circle(screen, color, (cx, cy), collider_px, 2)
 
     pygame.display.flip()
 
 # ---------------------------------------------------------
-# main() test
+# main()
 # ---------------------------------------------------------
 def main():
     initialize()
 
     while True:
-        dt = clock.tick(60)
+        dt = clock.tick(60)  # ← 60FPS固定
         process_input()
         update(dt)
         update_camera(dt)
