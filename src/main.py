@@ -31,6 +31,22 @@ BATTLE_HEROINE_FOCUS_DELAY_FRAMES = 5  # 静止フレーム数
 BATTLE_HEROINE_ZOOMOUT_FRAMES = 60      # ズームアウトに要するフレーム数
 BATTLE_HEROINE_ZOOMOUT_ANCHOR = 0.625   # ヒロイン下端から高さの何倍がバトルウィンドウ下端に来るか
 
+# バトルウィンドウ色
+BATTLE_WINDOW_COLOR = (30, 80, 200)  # バトル中のウィンドウ色
+RESULT_WINDOW_COLOR = (0, 0, 0)      # リザルト到達後のウィンドウ色
+
+# リザルト演出
+BATTLE_FLASHOUT_FRAMES    = 30  # バトルウィンドウが黒→白にフラッシュアウトするフレーム数
+RESULT_WHITE_DELAY_FRAMES = 30  # 白ウィンドウ静止フレーム数
+RESULT_SLIDEIN_FRAMES     = 30  # バストショットのスライドイン所要フレーム数
+RESULT_TEXT_FRAMES_PER_CHAR = 10  # 勝利メッセージ1文字追加するのに要するフレーム数
+RESULT_TEXT_DELAY_FRAMES   = 30  # スライドイン完了後、テキスト・ボイス開始までの待機フレーム数
+RESULT_WIN_BGM_START_SEC   = 148.0  # 勝利演出開始時にbattle.mp3を再生開始する秒数
+
+# 音量
+BGM_BATTLE_VOLUME = 0.5  # バトルBGM音量（0.0～1.0）
+VOICE_WIN_VOLUME  = 1.0  # 勝利ボイス音量（0.0～1.0）
+
 # ズームアウト後の待機モーション（縦横逆位相スクワッシュ）
 BATTLE_HEROINE_IDLE_PERIOD_FRAMES = 30  # 拡縮1周期のフレーム数
 BATTLE_HEROINE_IDLE_SCALE_DELTA   = 0.02  # 縦横スケールの振れ幅（1.0 ± DELTA）
@@ -40,17 +56,26 @@ BATTLE_HEROINE_IDLE_SCALE_DELTA   = 0.02  # 縦横スケールの振れ幅（1.0
 # ---------------------------------------------------------
 STATE_FIELD = 0
 STATE_BATTLE = 1
+STATE_RESULT = 2
 game_state = STATE_FIELD
 
 battle_anim_frame = 0
 heroine_focus_delay_frame = 0
 heroine_zoomout_frame = 0
-heroine_idle_frame = 0
+heroine_idle_frame       = 0
+battle_flashout_frame    = 0
+result_white_delay_frame = 0
+result_slidein_frame     = 0
+result_text_delay_frame  = 0
+result_text_frame        = 0
 
-# ---------------------------------------------------------
+# ----------------------------------------------------------
 # フォント
-# ---------------------------------------------------------
-font = pygame.font.SysFont(None, 24)
+# ----------------------------------------------------------
+RESULT_TEXT_FONT_SIZE = 32  # リザルトセリフのフォントサイズ
+
+font           = pygame.font.SysFont(None, 24)
+font_result    = pygame.font.Font('C:/Windows/Fonts/meiryo.ttc', RESULT_TEXT_FONT_SIZE)
 
 # ---------------------------------------------------------
 # ズーム設定
@@ -120,6 +145,9 @@ tile_map = {}
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 WALK_DIR = os.path.join(BASE_DIR, "..", "assets", "images", "characters", "bunny", "bunny_walk")
 BACK_IMG_PATH = os.path.join(BASE_DIR, "..", "assets", "images", "characters", "bunny", "bunny_back.png")
+WIN_IMG_PATH  = os.path.join(BASE_DIR, "..", "assets", "images", "characters", "bunny", "bunny_win.png")
+VOICE_WIN_PATH  = os.path.join(BASE_DIR, "..", "assets", "sound", "voices", "bunny_win.mp3")
+BGM_BATTLE_PATH = os.path.join(BASE_DIR, "..", "assets", "sound", "bgms", "battle.mp3")
 
 def load_walk_images():
     files = [f for f in os.listdir(WALK_DIR)
@@ -146,8 +174,11 @@ frame_timer = 0
 FRAME_INTERVAL = 1
 last_image = None
 
-battle_back_img = None  # 後ろ姿画像（スケール後）
+battle_back_img     = None  # 後ろ姿画像（スケール後）
 battle_back_img_raw = None  # 後ろ姿画像（オリジナル）
+result_win_img      = None  # 勝利バストショット画像（スケール後）
+result_win_img_raw  = None  # 勝利バストショット画像（オリジナル）
+voice_win           = None  # 勝利ボイス
 
 # ---------------------------------------------------------
 # ワールド座標 → スクリーン座標
@@ -238,6 +269,7 @@ def resolve_collision(px, py):
 # ---------------------------------------------------------
 def initialize():
     global tile_map, walk_images, last_image, battle_back_img, battle_back_img_raw
+    global result_win_img, result_win_img_raw, voice_win
     global player_world_x, player_world_y
 
     for my in range(TILE_MIN, TILE_MAX + 1):
@@ -261,6 +293,17 @@ def initialize():
         (int(orig_w * scale), target_h)
     )
 
+    # ★ 勝利バストショット画像を読み込み（等方スケーリングでウィンドウ高さに合わせる）
+    win_raw = pygame.image.load(WIN_IMG_PATH).convert_alpha()
+    win_orig_w, win_orig_h = win_raw.get_size()
+    win_scale = BATTLE_MAIN_WINDOW_HEIGHT / win_orig_h
+    win_img_w = max(1, int(win_orig_w * win_scale))
+    result_win_img_raw = win_raw   # グローバル変数に保存
+    result_win_img = pygame.transform.smoothscale(win_raw, (win_img_w, BATTLE_MAIN_WINDOW_HEIGHT))
+
+    voice_win = pygame.mixer.Sound(VOICE_WIN_PATH)
+    voice_win.set_volume(VOICE_WIN_VOLUME)
+
     player_world_x, player_world_y = resolve_collision(player_world_x, player_world_y)
 
 # ---------------------------------------------------------
@@ -272,6 +315,8 @@ def process_input():
     global moving
     global game_state, battle_anim_frame
     global heroine_focus_delay_frame, heroine_zoomout_frame, heroine_idle_frame
+    global battle_flashout_frame, result_white_delay_frame, result_slidein_frame
+    global result_text_delay_frame, result_text_frame
 
     moving = False
     move_x = 0.0
@@ -300,10 +345,33 @@ def process_input():
                 heroine_focus_delay_frame = 0
                 heroine_zoomout_frame = 0
                 heroine_idle_frame = 0
-            else:
-                game_state = STATE_FIELD
+                battle_flashout_frame    = 0
+                result_white_delay_frame = 0
+                result_slidein_frame     = 0
+                result_text_delay_frame  = 0
+                result_text_frame        = 0
+                pygame.mixer.music.load(BGM_BATTLE_PATH)
+                pygame.mixer.music.set_volume(BGM_BATTLE_VOLUME)
+                pygame.mixer.music.play()
 
-    if game_state == STATE_BATTLE:
+        # [開発用] Fキー：敵を倒したことにしてリザルトへ
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_f:
+            if game_state == STATE_BATTLE:
+                game_state = STATE_RESULT
+                battle_flashout_frame    = 0
+                result_white_delay_frame = 0
+                result_slidein_frame     = 0
+                result_text_delay_frame  = 0
+                result_text_frame        = 0
+                pygame.mixer.music.stop()
+
+        # Enterキー：リザルト画面からフィールドへ
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
+            if game_state == STATE_RESULT:
+                game_state = STATE_FIELD
+                pygame.mixer.music.stop()
+
+    if game_state in (STATE_BATTLE, STATE_RESULT):
         return
 
     keys = pygame.key.get_pressed()
@@ -329,6 +397,33 @@ def update(dt):
     global player_world_x, player_world_y
     global game_state
     global battle_anim_frame, heroine_focus_delay_frame, heroine_zoomout_frame, heroine_idle_frame
+    global battle_flashout_frame, result_white_delay_frame, result_slidein_frame
+    global result_text_delay_frame, result_text_frame
+
+    if game_state == STATE_RESULT:
+        # フェーズ①：フラッシュアウト（黒→白）
+        if battle_flashout_frame < BATTLE_FLASHOUT_FRAMES:
+            battle_flashout_frame += 1
+            return
+        # フェーズ②：白ウィンドウ静止
+        if result_white_delay_frame < RESULT_WHITE_DELAY_FRAMES:
+            result_white_delay_frame += 1
+            return
+        # フェーズ③：スライドイン
+        if result_slidein_frame < RESULT_SLIDEIN_FRAMES:
+            result_slidein_frame += 1
+            return
+        # フェーズ③.5：スライドイン後の待機（テキスト・ボイス開始前）
+        if result_text_delay_frame < RESULT_TEXT_DELAY_FRAMES:
+            result_text_delay_frame += 1
+            return
+        # フェーズ④：テキスト逐次表示
+        if result_text_frame == 0:
+            if voice_win:
+                voice_win.play()
+            pygame.mixer.music.play(start=RESULT_WIN_BGM_START_SEC)
+        result_text_frame += 1
+        return
 
     if game_state == STATE_BATTLE:
 
@@ -420,7 +515,7 @@ def render_battle():
 
     # バトルメインウィンドウ
     overlay = pygame.Surface((SCREEN_W, current_height))
-    overlay.fill((0, 0, 0))
+    overlay.fill(BATTLE_WINDOW_COLOR)
     screen.blit(overlay, (0, band_y))
 
     # ★ ヒロイン後ろ姿の描画
@@ -471,11 +566,104 @@ def render_battle():
 # ---------------------------------------------------------
 # render()
 # ---------------------------------------------------------
+# ----------------------------------------------------------
+# render_result()
+# ----------------------------------------------------------
+def render_result():
+    band_y      = SCREEN_H // 2 - BATTLE_MAIN_WINDOW_HEIGHT // 2
+    band_bottom = band_y + BATTLE_MAIN_WINDOW_HEIGHT
+
+    render_field()
+
+    # -------- フェーズ①：フラッシュアウト（バトルウィンドウ色→白） --------
+    if battle_flashout_frame < BATTLE_FLASHOUT_FRAMES:
+        t = battle_flashout_frame / BATTLE_FLASHOUT_FRAMES
+        br, bg, bb = BATTLE_WINDOW_COLOR
+        fc = (int(br + (255 - br) * t), int(bg + (255 - bg) * t), int(bb + (255 - bb) * t))
+        overlay = pygame.Surface((SCREEN_W, BATTLE_MAIN_WINDOW_HEIGHT))
+        overlay.fill(fc)
+        screen.blit(overlay, (0, band_y))
+        # ヒロイン後ろ姿をフェードアウト
+        if battle_back_img_raw:
+            orig_w, orig_h = battle_back_img_raw.get_size()
+            h = int(SCREEN_H * BATTLE_HEROINE_LAST_SCALE)
+            w = max(1, int(orig_w * h / orig_h))
+            img = pygame.transform.smoothscale(battle_back_img_raw, (w, h))
+            boty = band_bottom + int(h * BATTLE_HEROINE_ZOOMOUT_ANCHOR)
+            alpha_img = img.copy()
+            alpha_img.set_alpha(int(255 * (1.0 - t)))
+            screen.set_clip(pygame.Rect(0, band_y, SCREEN_W, BATTLE_MAIN_WINDOW_HEIGHT))
+            screen.blit(alpha_img, img.get_rect(midbottom=(SCREEN_W // 2, boty)))
+            screen.set_clip(None)
+        return
+
+    # -------- フェーズ②：白ウィンドウ静止 --------
+    overlay_white = pygame.Surface((SCREEN_W, BATTLE_MAIN_WINDOW_HEIGHT))
+    overlay_white.fill((255, 255, 255))
+
+    if result_white_delay_frame < RESULT_WHITE_DELAY_FRAMES:
+        screen.blit(overlay_white, (0, band_y))
+        return
+
+    # -------- フェーズ③④：スライドイン（黒シルエット→通常） --------
+    if result_win_img:
+        win_w = result_win_img.get_width()
+
+        # スライドイン進行度（0.0 → 1.0）
+        t_slide = min(1.0, result_slidein_frame / RESULT_SLIDEIN_FRAMES) \
+                  if RESULT_SLIDEIN_FRAMES > 0 else 1.0
+        # ease-out
+        t_eased = 1.0 - (1.0 - t_slide) ** 2
+
+        # X 位置：画面外左端（-win_w/2）→ 画面中央
+        start_cx = -win_w // 2
+        end_cx   = SCREEN_W // 2
+        cx = int(start_cx + (end_cx - start_cx) * t_eased)
+
+        img_rect = result_win_img.get_rect(midtop=(cx, band_y))
+
+        arrived = (result_slidein_frame >= RESULT_SLIDEIN_FRAMES)
+
+        if arrived:
+            # 到達後：RESULT_WINDOW_COLOR ウィンドウ + 通常表示
+            overlay_result = pygame.Surface((SCREEN_W, BATTLE_MAIN_WINDOW_HEIGHT))
+            overlay_result.fill(RESULT_WINDOW_COLOR)
+            screen.blit(overlay_result, (0, band_y))
+            screen.set_clip(pygame.Rect(0, band_y, SCREEN_W, BATTLE_MAIN_WINDOW_HEIGHT))
+            screen.blit(result_win_img, img_rect)
+            screen.set_clip(None)
+        else:
+            # スライドイン中：白ウィンドウ + 黒シルエット
+            screen.blit(overlay_white, (0, band_y))
+            # 黒シルエット：画像と同サイズの Surface に黒を乗算合成
+            silhouette = result_win_img.copy()
+            black_fill = pygame.Surface(silhouette.get_size(), pygame.SRCALPHA)
+            black_fill.fill((0, 0, 0, 255))
+            silhouette.blit(black_fill, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+            screen.set_clip(pygame.Rect(0, band_y, SCREEN_W, BATTLE_MAIN_WINDOW_HEIGHT))
+            screen.blit(silhouette, img_rect)
+            screen.set_clip(None)
+    else:
+        # 画像がない場合のフォールバック
+        screen.blit(overlay_white, (0, band_y))
+
+    # スライドイン後の待機を経てセリフを表示
+    if result_text_delay_frame >= RESULT_TEXT_DELAY_FRAMES:
+        text_full = 'もっと大きいのが欲しいの…'
+        num_chars = min(len(text_full), result_text_frame // RESULT_TEXT_FRAMES_PER_CHAR + 1)
+        full_surf = font_result.render(text_full, True, (255, 255, 255))
+        left_x = SCREEN_W // 2 - full_surf.get_width() // 2
+        serif = font_result.render(text_full[:num_chars], True, (255, 255, 255))
+        screen.blit(serif, (left_x, SCREEN_H // 2 - serif.get_height() // 2))
+
+
 def render():
     if game_state == STATE_FIELD:
         render_field()
-    else:
+    elif game_state == STATE_BATTLE:
         render_battle()
+    else:  # STATE_RESULT
+        render_result()
 
     pygame.display.flip()
 
