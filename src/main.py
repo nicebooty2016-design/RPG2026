@@ -22,18 +22,18 @@ BATTLE_MAIN_WINDOW_HEIGHT = 400
 BATTLE_MAIN_WINDOW_ANIM_FRAMES = 10   # バトルメインウィンドウが開ききるまでのフレーム数
 
 # ヒロイン演出パラメータ
-BATTLE_HEROINE_FIRST_SCALE = 3.6     # 画面高さの何倍にするか
-BATTLE_HEROINE_FIRST_FOCUS = 0.10    # 下端から高さの何倍の位置を画面中央にするか
-BATTLE_HEROINE_SECOND_FOCUS = 0.80   # SECOND段階の注視点
+BATTLE_HEROINE_FIRST_SCALE = 3.6    # 登場時の画像高さ（画面高さの何倍）
+BATTLE_HEROINE_LAST_SCALE  = 1.2    # ズームアウト後の画像高さ（画面高さの何倍）
+BATTLE_HEROINE_FIRST_FOCUS = 0.10   # 注視点：下端から高さの何倍の位置を画面中央に合わせるか
 
-# バトルメインウィンドウ開いた後の静止 → カメラ上昇
-BATTLE_HEROINE_FOCUS_DELAY_FRAMES = 20   # 静止フレーム
-BATTLE_HEROINE_FOCUS_FRAMES = 60         # FIRST → SECOND に移動するフレーム数
+# バトルウィンドウが開いた後の静止 → ズームアウト
+BATTLE_HEROINE_FOCUS_DELAY_FRAMES = 5  # 静止フレーム数
+BATTLE_HEROINE_ZOOMOUT_FRAMES = 60      # ズームアウトに要するフレーム数
+BATTLE_HEROINE_ZOOMOUT_ANCHOR = 0.625   # ヒロイン下端から高さの何倍がバトルウィンドウ下端に来るか
 
-# SECOND注視後のズームアウト演出
-BATTLE_HEROINE_ZOOMOUT_DELAY_FRAMES = 30  # SECOND注視後の静止フレーム数
-BATTLE_HEROINE_ZOOMOUT_FRAMES = 90        # ズームアウトに要するフレーム数
-BATTLE_HEROINE_ZOOMOUT_ANCHOR = 0.7      # ヒロイン下端から高さの何倍がバトルウィンドウ下端に来るか
+# ズームアウト後の待機モーション（縦横逆位相スクワッシュ）
+BATTLE_HEROINE_IDLE_PERIOD_FRAMES = 30  # 拡縮1周期のフレーム数
+BATTLE_HEROINE_IDLE_SCALE_DELTA   = 0.02  # 縦横スケールの振れ幅（1.0 ± DELTA）
 
 # ---------------------------------------------------------
 # ゲーム状態
@@ -44,9 +44,8 @@ game_state = STATE_FIELD
 
 battle_anim_frame = 0
 heroine_focus_delay_frame = 0
-heroine_focus_frame = 0
-heroine_zoomout_delay_frame = 0
 heroine_zoomout_frame = 0
+heroine_idle_frame = 0
 
 # ---------------------------------------------------------
 # フォント
@@ -272,8 +271,7 @@ def process_input():
     global move_x, move_y
     global moving
     global game_state, battle_anim_frame
-    global heroine_focus_delay_frame, heroine_focus_frame
-    global heroine_zoomout_delay_frame, heroine_zoomout_frame
+    global heroine_focus_delay_frame, heroine_zoomout_frame, heroine_idle_frame
 
     moving = False
     move_x = 0.0
@@ -300,9 +298,8 @@ def process_input():
                 game_state = STATE_BATTLE
                 battle_anim_frame = 0
                 heroine_focus_delay_frame = 0
-                heroine_focus_frame = 0
-                heroine_zoomout_delay_frame = 0
                 heroine_zoomout_frame = 0
+                heroine_idle_frame = 0
             else:
                 game_state = STATE_FIELD
 
@@ -331,8 +328,7 @@ def update(dt):
     global frame_timer, frame_index, last_image
     global player_world_x, player_world_y
     global game_state
-    global battle_anim_frame, heroine_focus_delay_frame, heroine_focus_frame
-    global heroine_zoomout_delay_frame, heroine_zoomout_frame
+    global battle_anim_frame, heroine_focus_delay_frame, heroine_zoomout_frame, heroine_idle_frame
 
     if game_state == STATE_BATTLE:
 
@@ -341,26 +337,18 @@ def update(dt):
             battle_anim_frame += 1
             return
 
-        # ② 静止フレーム（ハイヒール見せ時間）
+        # ② 静止フレーム
         if heroine_focus_delay_frame < BATTLE_HEROINE_FOCUS_DELAY_FRAMES:
             heroine_focus_delay_frame += 1
             return
 
-        # ③ 注視点移動（背中 → 肩）
-        if heroine_focus_frame < BATTLE_HEROINE_FOCUS_FRAMES:
-            heroine_focus_frame += 1
-            return
-
-        # ④ SECOND注視後の静止
-        if heroine_zoomout_delay_frame < BATTLE_HEROINE_ZOOMOUT_DELAY_FRAMES:
-            heroine_zoomout_delay_frame += 1
-            return
-
-        # ⑤ ズームアウト
+        # ③ ズームアウト
         if heroine_zoomout_frame < BATTLE_HEROINE_ZOOMOUT_FRAMES:
             heroine_zoomout_frame += 1
             return
 
+        # ④ 待機モーション（無限ループ）
+        heroine_idle_frame += 1
         return
 
     # フィールド時のアニメ
@@ -439,54 +427,38 @@ def render_battle():
     if battle_back_img_raw:
         orig_w, orig_h = battle_back_img_raw.get_size()
 
-        # --- ズームアウト進行度（0.0～1.0）---
-        if heroine_zoomout_frame > 0 and BATTLE_HEROINE_ZOOMOUT_FRAMES > 0:
-            t_zoom = min(1.0, heroine_zoomout_frame / BATTLE_HEROINE_ZOOMOUT_FRAMES)
-        else:
-            t_zoom = 0.0
-
-        # 開始スケール（FIRST_SCALE基準の画像高さ）
-        start_img_h = int(SCREEN_H * BATTLE_HEROINE_FIRST_SCALE)
-
-        # 終了スケール：ヒロイン高さ × ANCHOR がバトルウィンドウ高さに収まるサイズ
-        # band_bottom - band_y = BATTLE_MAIN_WINDOW_HEIGHT（完全に開いた状態）
-        end_img_h = int(BATTLE_MAIN_WINDOW_HEIGHT / BATTLE_HEROINE_ZOOMOUT_ANCHOR)
-
-        # ease-out 補間
+        # ズームアウト進行度（0.0 → 1.0）
+        t_zoom = min(1.0, heroine_zoomout_frame / BATTLE_HEROINE_ZOOMOUT_FRAMES) \
+                 if BATTLE_HEROINE_ZOOMOUT_FRAMES > 0 else 1.0
+        # ease-out
         t_eased = 1.0 - (1.0 - t_zoom) ** 2
-        img_h = int(start_img_h + (end_img_h - start_img_h) * t_eased)
-        img_h = max(1, img_h)
 
-        scale = img_h / orig_h
-        img_w = max(1, int(orig_w * scale))
+        # 画像高さ：登場サイズ → ズームアウト後サイズ
+        start_img_h = int(SCREEN_H * BATTLE_HEROINE_FIRST_SCALE)
+        end_img_h   = int(SCREEN_H * BATTLE_HEROINE_LAST_SCALE)
+        img_h = max(1, int(start_img_h + (end_img_h - start_img_h) * t_eased))
+
+        img_w = max(1, int(orig_w * img_h / orig_h))
         img = pygame.transform.smoothscale(battle_back_img_raw, (img_w, img_h))
 
-        # --- 注視点補間（FIRST → SECOND）---
-        if BATTLE_HEROINE_FOCUS_FRAMES > 0:
-            t_focus = min(1.0, heroine_focus_frame / BATTLE_HEROINE_FOCUS_FRAMES)
-        else:
-            t_focus = 1.0
+        # bottom_y：注視点（FIRST_FOCUS）を画面中央に固定したままズームアウト後は
+        # ANCHOR位置がバトルウィンドウ下端に来るよう補間
+        bottom_y_start = SCREEN_H // 2 + int(start_img_h * BATTLE_HEROINE_FIRST_FOCUS)
+        bottom_y_end   = band_bottom + int(end_img_h * BATTLE_HEROINE_ZOOMOUT_ANCHOR)
+        bottom_y = int(bottom_y_start + (bottom_y_end - bottom_y_start) * t_eased)
 
-        focus = (
-            BATTLE_HEROINE_FIRST_FOCUS +
-            (BATTLE_HEROINE_SECOND_FOCUS - BATTLE_HEROINE_FIRST_FOCUS) * t_focus
-        )
+        # ④ 待機モーション：縦横逆位相スクワッシュ（ズームアウト完了後のみ適用）
+        if heroine_zoomout_frame >= BATTLE_HEROINE_ZOOMOUT_FRAMES:
+            idle_t = math.sin(heroine_idle_frame / BATTLE_HEROINE_IDLE_PERIOD_FRAMES * 2 * math.pi)
+            sx = 1.0 + BATTLE_HEROINE_IDLE_SCALE_DELTA * idle_t   # 横：+側で膨らむ
+            sy = 1.0 - BATTLE_HEROINE_IDLE_SCALE_DELTA * idle_t   # 縦：横と逆位相
+            idle_w = max(1, int(img.get_width()  * sx))
+            idle_h = max(1, int(img.get_height() * sy))
+            img = pygame.transform.smoothscale(img, (idle_w, idle_h))
+            # スケーリング中心 = キャラ下端：bottom_y はそのまま維持
 
-        # ズームアウト中：注視点は SECOND 固定のまま、
-        # ヒロイン下端から ANCHOR 倍の位置がバトルウィンドウ下端に来るよう bottom_y を計算
-        if t_zoom > 0.0:
-            # ズームアウト開始前の bottom_y（SECOND注視点での位置）
-            bottom_y_start = SCREEN_H//2 + int(start_img_h * focus)
-            # ズームアウト終了時の bottom_y：ANCHOR位置がバトルウィンドウ下端に来る
-            bottom_y_end = band_bottom + int(end_img_h * BATTLE_HEROINE_ZOOMOUT_ANCHOR)
-            bottom_y = int(bottom_y_start + (bottom_y_end - bottom_y_start) * t_eased)
-        else:
-            # ズームアウト前：注視点 focus の位置が画面中央
-            bottom_y = SCREEN_H//2 + int(img_h * focus)
+        img_rect = img.get_rect(midbottom=(SCREEN_W // 2, bottom_y))
 
-        img_rect = img.get_rect(midbottom=(SCREEN_W//2, bottom_y))
-
-        # バトルメインウィンドウ内にクリップ
         clip_rect = pygame.Rect(0, band_y, SCREEN_W, current_height)
         screen.set_clip(clip_rect)
         screen.blit(img, img_rect)
