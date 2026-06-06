@@ -13,34 +13,14 @@ screen = pygame.display.set_mode((SCREEN_W, SCREEN_H))
 clock = pygame.time.Clock()
 
 # ---------------------------------------------------------
-# ★ 調整可能な定数（演出パラメータ）
-# ---------------------------------------------------------
-FIXED_FPS = 60
-
-BATTLE_BAND_HEIGHT = 400
-BATTLE_ANIM_FRAMES = 10   # 黒帯が開ききるまでのフレーム数
-
-# ヒロイン演出パラメータ
-BATTLE_HEROINE_FIRST_SCALE = 3.6     # 画面高さの何倍にするか
-BATTLE_HEROINE_FIRST_FOCUS = 0.10    # 下端から高さの何倍の位置を画面中央にするか
-BATTLE_HEROINE_SECOND_FOCUS = 0.80   # SECOND段階の注視点
-
-BATTLE_HEROINE_FOCUS_DELAY_FRAMES = 20   # ★ 黒帯が開ききってから注視点移動を開始するまでの静止フレーム
-BATTLE_HEROINE_FOCUS_FRAMES = 60        # FIRST → SECOND に移動するフレーム数
-
-# ---------------------------------------------------------
 # ゲーム状態
 # ---------------------------------------------------------
 STATE_FIELD = 0
 STATE_BATTLE = 1
 game_state = STATE_FIELD
 
-battle_anim_frame = 0
-heroine_focus_delay_frame = 0
-heroine_focus_frame = 0
-
 # ---------------------------------------------------------
-# フォント
+# フォント（デバッグ表示用）
 # ---------------------------------------------------------
 font = pygame.font.SysFont(None, 24)
 
@@ -58,9 +38,9 @@ zoom = 1.0
 CAMERA_Y_OFFSET_M = -0.25
 
 # ---------------------------------------------------------
-# コライダ設定
+# コライダ設定（キャラ足元の円）
 # ---------------------------------------------------------
-PLAYER_COLLIDER_RADIUS = 0.25
+PLAYER_COLLIDER_RADIUS = 0.25  # 0.25m
 
 # ---------------------------------------------------------
 # ワールドスケール
@@ -85,10 +65,10 @@ camera_world_x = 0.0
 camera_world_y = 10.0
 
 # ---------------------------------------------------------
-# キャラ移動速度
+# キャラ移動速度（秒速2m）
 # ---------------------------------------------------------
 player_speed_mps = 2.0
-player_speed = player_speed_mps / FIXED_FPS
+player_speed = player_speed_mps / 60.0  # 60FPSに合わせる
 
 # ---------------------------------------------------------
 # タイルマップ
@@ -111,7 +91,6 @@ tile_map = {}
 # ---------------------------------------------------------
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 WALK_DIR = os.path.join(BASE_DIR, "..", "assets", "images", "characters", "bunny", "bunny_walk")
-BACK_IMG_PATH = os.path.join(BASE_DIR, "..", "assets", "images", "characters", "bunny", "bunny_back.png")
 
 def load_walk_images():
     files = [f for f in os.listdir(WALK_DIR)
@@ -135,10 +114,8 @@ def load_walk_images():
 walk_images = []
 frame_index = 0
 frame_timer = 0
-FRAME_INTERVAL = 1
+FRAME_INTERVAL = 1  # 60FPS用
 last_image = None
-
-battle_back_img = None  # 後ろ姿画像（スケール後）
 
 # ---------------------------------------------------------
 # ワールド座標 → スクリーン座標
@@ -163,14 +140,14 @@ def is_near_mountain(px, py):
     return False
 
 # ---------------------------------------------------------
-# 円 vs AABB 押し出し
+# 円 vs AABB 押し出し（depenetration）
 # ---------------------------------------------------------
 def resolve_collision(px, py):
     r = PLAYER_COLLIDER_RADIUS
     mx = math.floor(px / TILE_SIZE_M)
     my = math.floor(py / TILE_SIZE_M)
 
-    for _ in range(4):
+    for _ in range(4):  # 最大4回押し出し
         collided = False
 
         for ty in range(my - 1, my + 2):
@@ -228,7 +205,7 @@ def resolve_collision(px, py):
 # initialize()
 # ---------------------------------------------------------
 def initialize():
-    global tile_map, walk_images, last_image, battle_back_img
+    global tile_map, walk_images, last_image
     global player_world_x, player_world_y
 
     for my in range(TILE_MIN, TILE_MAX + 1):
@@ -238,18 +215,7 @@ def initialize():
     walk_images = load_walk_images()
     last_image = walk_images[0]
 
-    # ★ 後ろ姿画像を読み込み → スケール
-    raw_img = pygame.image.load(BACK_IMG_PATH).convert_alpha()
-    orig_w, orig_h = raw_img.get_size()
-
-    target_h = int(SCREEN_H * BATTLE_HEROINE_FIRST_SCALE)
-    scale = target_h / orig_h
-
-    battle_back_img = pygame.transform.smoothscale(
-        raw_img,
-        (int(orig_w * scale), target_h)
-    )
-
+    # 初期めり込みを押し出し
     player_world_x, player_world_y = resolve_collision(player_world_x, player_world_y)
 
 # ---------------------------------------------------------
@@ -259,8 +225,7 @@ def process_input():
     global zoom, walk_images, last_image
     global move_x, move_y
     global moving
-    global game_state, battle_anim_frame
-    global heroine_focus_delay_frame, heroine_focus_frame
+    global game_state
 
     moving = False
     move_x = 0.0
@@ -271,6 +236,7 @@ def process_input():
             pygame.quit()
             sys.exit()
 
+        # ズーム
         if event.type == pygame.MOUSEWHEEL:
             if event.y > 0:
                 zoom -= ZOOM_STEP
@@ -282,15 +248,16 @@ def process_input():
             walk_images = load_walk_images()
             last_image = walk_images[frame_index]
 
+        # ---------------------------------------------------------
+        # Eキーで FIELD ↔ BATTLE 切り替え
+        # ---------------------------------------------------------
         if event.type == pygame.KEYDOWN and event.key == pygame.K_e:
             if game_state == STATE_FIELD:
                 game_state = STATE_BATTLE
-                battle_anim_frame = 0
-                heroine_focus_delay_frame = 0
-                heroine_focus_frame = 0
             else:
                 game_state = STATE_FIELD
 
+    # バトル中は移動しない
     if game_state == STATE_BATTLE:
         return
 
@@ -316,28 +283,11 @@ def update(dt):
     global frame_timer, frame_index, last_image
     global player_world_x, player_world_y
     global game_state
-    global battle_anim_frame, heroine_focus_delay_frame, heroine_focus_frame
 
+    # バトル中はキャラ更新しない
     if game_state == STATE_BATTLE:
-
-        # ① 黒帯アニメ
-        if battle_anim_frame < BATTLE_ANIM_FRAMES:
-            battle_anim_frame += 1
-            return
-
-        # ② 静止フレーム
-        if heroine_focus_delay_frame < BATTLE_HEROINE_FOCUS_DELAY_FRAMES:
-            heroine_focus_delay_frame += 1
-            return
-
-        # ③ 注視点移動
-        if heroine_focus_frame < BATTLE_HEROINE_FOCUS_FRAMES:
-            heroine_focus_frame += 1
-            return
-
         return
 
-    # フィールド時のアニメ
     if moving:
         frame_timer += 1
         if frame_timer >= FRAME_INTERVAL:
@@ -345,9 +295,11 @@ def update(dt):
             frame_index = (frame_index + 1) % len(walk_images)
             last_image = walk_images[frame_index]
 
+    # X/Y 同時移動
     player_world_x += move_x
     player_world_y += move_y
 
+    # 押し出し
     player_world_x, player_world_y = resolve_collision(player_world_x, player_world_y)
 
 # ---------------------------------------------------------
@@ -364,6 +316,7 @@ def update_camera(dt):
 def render_field():
     screen.fill((0, 0, 0))
 
+    # タイル描画
     for (mx, my), color in tile_map.items():
         wx = mx * TILE_SIZE_M
         wy = my * TILE_SIZE_M
@@ -371,15 +324,18 @@ def render_field():
         rect = pygame.Rect(sx, sy, tile_size_px(), tile_size_px())
         pygame.draw.rect(screen, color, rect)
 
+    # キャラ描画
     sx, sy = world_to_screen(player_world_x, player_world_y)
     rect = last_image.get_rect(midbottom=(sx, sy))
     screen.blit(last_image, rect)
 
+    # デバッグ表示
     screen.blit(font.render(f"Player: ({player_world_x:.2f}, {player_world_y:.2f})", True, (255, 255, 255)), (10, 10))
     screen.blit(font.render(f"Camera: ({camera_world_x:.2f}, {camera_world_y:.2f})", True, (255, 255, 0)), (10, 30))
     screen.blit(font.render(f"Zoom: {zoom:.2f}", True, (0, 200, 255)), (10, 50))
     screen.blit(font.render(f"FPS: {clock.get_fps():.1f}", True, (255, 255, 255)), (10, 70))
 
+    # コライダ可視化
     collider_px = int(PLAYER_COLLIDER_RADIUS * METER_TO_PIXEL * zoom)
     cx, cy = world_to_screen(player_world_x, player_world_y)
 
@@ -394,49 +350,19 @@ def render_field():
 # render_battle()
 # ---------------------------------------------------------
 def render_battle():
+    # まずフィールド画面を描画
     render_field()
 
-    # ★ 黒帯アニメ進行度（0.0～1.0）
-    progress = min(1.0, battle_anim_frame / BATTLE_ANIM_FRAMES)
-    current_height = int(BATTLE_BAND_HEIGHT * progress)
-
-    band_y = SCREEN_H//2 - current_height//2
-
-    # 黒帯
-    overlay = pygame.Surface((SCREEN_W, current_height))
+    # 黒い太い帯をオーバーレイ
+    overlay_height = 200
+    overlay = pygame.Surface((SCREEN_W, overlay_height))
+    overlay.set_alpha(200)  # 半透明
     overlay.fill((0, 0, 0))
-    screen.blit(overlay, (0, band_y))
+    screen.blit(overlay, (0, SCREEN_H//2 - overlay_height//2))
 
-    # ★ ヒロイン後ろ姿の位置計算（FIRST → SECOND の補間）
-    if battle_back_img:
-        img = battle_back_img
-        img_h = img.get_height()
-
-        # 注視点補間
-        if BATTLE_HEROINE_FOCUS_FRAMES > 0:
-            t = min(1.0, heroine_focus_frame / BATTLE_HEROINE_FOCUS_FRAMES)
-        else:
-            t = 1.0
-
-        focus = (
-            BATTLE_HEROINE_FIRST_FOCUS +
-            (BATTLE_HEROINE_SECOND_FOCUS - BATTLE_HEROINE_FIRST_FOCUS) * t
-        )
-
-        # 下端 - (高さ × focus) が画面中央に来る
-        bottom_y = SCREEN_H//2 + int(img_h * focus)
-
-        img_rect = img.get_rect(midbottom=(SCREEN_W//2, bottom_y))
-
-        # 黒帯内にクリップ
-        clip_rect = pygame.Rect(0, band_y, SCREEN_W, current_height)
-        screen.set_clip(clip_rect)
-        screen.blit(img, img_rect)
-        screen.set_clip(None)
-
-    # テキスト
+    # バトル中の文字
     text = font.render("BATTLE MODE (Press E to return)", True, (255, 255, 255))
-    screen.blit(text, (SCREEN_W//2 - text.get_width()//2, band_y + 10))
+    screen.blit(text, (SCREEN_W//2 - text.get_width()//2, SCREEN_H//2 - 10))
 
 # ---------------------------------------------------------
 # render()
@@ -456,7 +382,7 @@ def main():
     initialize()
 
     while True:
-        dt = clock.tick(FIXED_FPS)
+        dt = clock.tick(60)  # ← 60FPS固定
         process_input()
         update(dt)
         update_camera(dt)
