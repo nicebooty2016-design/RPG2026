@@ -128,12 +128,24 @@ BATTLE_WHIP_FLASH_BLINK_PERIOD_FRAMES = 4   # 点滅1周期のフレーム数
 BATTLE_WHIP_FLASH_COLOR = (255, 255, 255)   # 点滅時に重ねる色（白）
 BATTLE_ANNIHILATE_FRAMES = 15               # 撃破した敵の殲滅演出（アルファ値を下げて消滅させる）にかけるフレーム数（ムチ・炎共通）
 
-# 炎（全体攻撃）演出パラメータ：その場で詠唱（攻撃ボイス再生 → 待機） → 敵全体を同時に白色点滅
-BATTLE_FLAME_CAST_DELAY_FRAMES = 60         # 攻撃ボイス再生から敵全体への白色点滅開始までの待機フレーム数
+# 炎（全体攻撃）演出パラメータ：その場で詠唱（攻撃ボイス再生 → 待機） → 敵全体を同時に赤色点滅
+BATTLE_FLAME_CAST_DELAY_FRAMES = 60         # 攻撃ボイス再生から敵全体への赤色点滅開始までの待機フレーム数
+BATTLE_FLAME_FLASH_COLOR = (255, 0, 0)      # 炎の点滅時に重ねる色（赤。ムチの白色点滅と区別するため）
 
 # 敵の攻撃演出パラメータ：ヒロインに接近 → 最接近で停止 → 元の位置へ後退（流れはムチ演出と同じ4ステート構成を共有する）
 BATTLE_ENEMY_ATTACK_TARGET_SCALE = 0.4      # 最接近時の敵の画像高さ（画面高さの何倍）
 BATTLE_ENEMY_ATTACK_TARGET_GROUND_Y_OFFSET_RATIO = 0.0  # 最接近時の敵の足元位置：バトルウィンドウ下端からのオフセット（画面高さの何倍。0でウィンドウ下端と一致）
+
+# HP関連パラメータ：最大HPと、各攻撃手段で増減するダメージ量の範囲（ランダム抽選はrandom.randint(MIN, MAX)で行う）
+HEROINE_MAX_HP = 200   # ヒロインの最大HP（現在HPは戦闘をまたいで引き継ぐ。回復はしない）
+GOBLIN_MAX_HP  = 30    # ゴブリン1体の最大HP（敵はエンカウント毎に最大HPへリセットされる）
+
+BATTLE_WHIP_DAMAGE_MIN  = 20   # ムチで敵に与えるダメージの最小値
+BATTLE_WHIP_DAMAGE_MAX  = 50   # ムチで敵に与えるダメージの最大値
+BATTLE_FLAME_DAMAGE_MIN = 10   # 炎で敵1体ごとに与えるダメージの最小値（全体攻撃だが各々個別に抽選する）
+BATTLE_FLAME_DAMAGE_MAX = 40   # 炎で敵1体ごとに与えるダメージの最大値
+BATTLE_ENEMY_ATTACK_DAMAGE_MIN = 10   # 敵の攻撃でヒロインが受けるダメージの最小値
+BATTLE_ENEMY_ATTACK_DAMAGE_MAX = 30   # 敵の攻撃でヒロインが受けるダメージの最大値
 
 # 攻撃対象選択カーソル（ムチ選択中、対象の敵の頭上に点滅表示する下向き三角カーソル。左右キーで対象変更）
 BATTLE_TARGET_CURSOR_COLOR  = (255, 255, 255)  # カーソルの色（白）
@@ -169,6 +181,10 @@ battle_menu_selected_index = 0
 battle_target_enemy_index  = 0  # ムチ選択中に左右キーで選べる攻撃対象（ENEMY_X_RATIOSのインデックス）
 battle_target_cursor_frame = 0  # 攻撃対象カーソルの点滅用フレームカウンタ
 
+# HP：ヒロインの現在HPは戦闘をまたいで引き継ぐ（回復しない）。敵の現在HPはエンカウント毎に最大HPへリセットされる
+heroine_hp = HEROINE_MAX_HP
+enemy_hp   = [GOBLIN_MAX_HP] * len(ENEMY_X_RATIOS)
+
 # 敵の撃破状態：True の敵は殲滅済み（選択対象・通常表示の対象外となる）
 enemy_defeated = [False] * len(ENEMY_X_RATIOS)
 battle_annihilate_targets = []  # 殲滅演出（アルファ値を下げて消滅）中の敵のインデックスのリスト（[] = 演出なし。ムチは1体、炎は複数を同時に格納）
@@ -188,7 +204,7 @@ BATTLE_WHIP_PHASE_RETURN      = 3  # 元の位置へ後退中
 battle_whip_phase = BATTLE_WHIP_PHASE_APPROACH
 battle_whip_frame = 0
 
-# 炎（全体攻撃）演出ステート：その場で詠唱（待機） → 敵全体に同時に白色点滅
+# 炎（全体攻撃）演出ステート：その場で詠唱（待機） → 敵全体に同時に赤色点滅
 BATTLE_FLAME_PHASE_CAST  = 0  # 攻撃ボイス再生後、白色点滅開始までの待機中（その場にとどまる）
 BATTLE_FLAME_PHASE_FLASH = 1  # ダメージ演出（敵全体の白色点滅）中
 battle_flame_phase = BATTLE_FLAME_PHASE_CAST
@@ -656,7 +672,7 @@ def process_input():
     global battle_flame_phase, battle_flame_frame
     global battle_turn_order, battle_turn_index
     global battle_enemy_attack_phase, battle_enemy_attack_frame, battle_attacking_enemy_index
-    global enemy_defeated, battle_annihilate_targets, battle_annihilate_frame
+    global enemy_defeated, enemy_hp, battle_annihilate_targets, battle_annihilate_frame
     global is_paused, pause_step_requested
 
     moving = False
@@ -711,6 +727,7 @@ def process_input():
                 battle_enemy_attack_frame = 0
                 battle_attacking_enemy_index = -1
                 enemy_defeated = [False] * len(ENEMY_X_RATIOS)
+                enemy_hp = [GOBLIN_MAX_HP] * len(ENEMY_X_RATIOS)
                 battle_annihilate_targets = []
                 battle_annihilate_frame   = 0
                 pygame.mixer.music.load(BGM_BATTLE_PATH)
@@ -809,7 +826,8 @@ def update(dt):
     global battle_enemy_attack_phase, battle_enemy_attack_frame
     global battle_target_cursor_frame
     global battle_target_enemy_index
-    global enemy_defeated, battle_annihilate_targets, battle_annihilate_frame
+    global enemy_defeated, enemy_hp, battle_annihilate_targets, battle_annihilate_frame
+    global heroine_hp
 
     if game_state == STATE_RESULT:
         # フェーズ①：フラッシュアウト（黒→白）
@@ -894,18 +912,23 @@ def update(dt):
                         elif battle_whip_phase == BATTLE_WHIP_PHASE_FLASH:
                             battle_whip_frame += 1
                             if battle_whip_frame >= BATTLE_WHIP_FLASH_FRAMES:
-                                # ダメージ演出完了 → 攻撃対象の敵を撃破：殲滅演出（アルファ値を下げて消滅）を開始する
-                                # （対象インデックスはこの時点では変更しない：後退アニメは「撃破した敵の位置」を基準に行うため、
-                                #   後退が完了するまでは battle_target_enemy_index を維持する）
-                                defeated_target = battle_target_enemy_index
-                                enemy_defeated[defeated_target] = True
-                                battle_annihilate_targets = [defeated_target]
-                                battle_annihilate_frame   = 0
+                                # ダメージ演出完了の瞬間にHPを更新する（0未満にはならない。0になっていたら撃破扱い）
+                                target = battle_target_enemy_index
+                                damage = random.randint(BATTLE_WHIP_DAMAGE_MIN, BATTLE_WHIP_DAMAGE_MAX)
+                                enemy_hp[target] = max(0, enemy_hp[target] - damage)
+
+                                if enemy_hp[target] <= 0:
+                                    # 撃破：殲滅演出（アルファ値を下げて消滅）を開始する
+                                    # （対象インデックスはこの時点では変更しない：後退アニメは「撃破した敵の位置」を基準に行うため、
+                                    #   後退が完了するまでは battle_target_enemy_index を維持する）
+                                    enemy_defeated[target] = True
+                                    battle_annihilate_targets = [target]
+                                    battle_annihilate_frame   = 0
 
                                 if all(enemy_defeated):
                                     # 最後の敵を撃破：後退はせず、ダメージ演出完了直後に既存の戦闘終了演出（リザルトへの遷移）を行う
                                     # （行動順が一巡する前でも、その時点で戦闘を終了する）
-                                    whip_target_x = int(SCREEN_W * ENEMY_X_RATIOS[defeated_target])
+                                    whip_target_x = int(SCREEN_W * ENEMY_X_RATIOS[target])
                                     whip_target_bottom_y = SCREEN_H - int(SCREEN_H * BATTLE_WHIP_TARGET_GROUND_Y_FROM_BOTTOM_RATIO)
                                     whip_target_img_h = int(SCREEN_H * BATTLE_WHIP_TARGET_SCALE)
                                     enter_result_state(heroine_override=(whip_target_x, whip_target_bottom_y, whip_target_img_h))
@@ -922,7 +945,7 @@ def update(dt):
                                 advance_battle_turn()
                     else:
                         # 炎：その場にとどまったまま詠唱し（攻撃ボイスは番開始時に再生済み）、
-                        # 一定フレーム待機後、生存中の敵全体に同時に白色点滅ダメージを与える
+                        # 一定フレーム待機後、生存中の敵全体に同時に赤色点滅ダメージを与える
                         if battle_flame_phase == BATTLE_FLAME_PHASE_CAST:
                             battle_flame_frame += 1
                             if battle_flame_frame >= BATTLE_FLAME_CAST_DELAY_FRAMES:
@@ -933,8 +956,27 @@ def update(dt):
                         elif battle_flame_phase == BATTLE_FLAME_PHASE_FLASH:
                             battle_flame_frame += 1
                             if battle_flame_frame >= BATTLE_WHIP_FLASH_FRAMES:
-                                # ダメージ演出完了：現状は敵を撃破しない（白色点滅のみ）ため、そのまま次の番へ進める
-                                advance_battle_turn()
+                                # ダメージ演出完了の瞬間に、生存中の敵全体へ個別にランダムダメージを与えてHPを更新する
+                                # （0未満にはならない。0になった敵はその場で撃破扱いとなり、同時に殲滅演出を開始する）
+                                newly_defeated = []
+                                for i in range(len(enemy_defeated)):
+                                    if enemy_defeated[i]:
+                                        continue
+                                    damage = random.randint(BATTLE_FLAME_DAMAGE_MIN, BATTLE_FLAME_DAMAGE_MAX)
+                                    enemy_hp[i] = max(0, enemy_hp[i] - damage)
+                                    if enemy_hp[i] <= 0:
+                                        enemy_defeated[i] = True
+                                        newly_defeated.append(i)
+
+                                if newly_defeated:
+                                    battle_annihilate_targets = newly_defeated
+                                    battle_annihilate_frame   = 0
+
+                                if all(enemy_defeated):
+                                    # 全滅：ヒロインは接近していないため、後退や表示位置の上書きは不要
+                                    enter_result_state()
+                                else:
+                                    advance_battle_turn()
                 else:
                     # 敵の番：battle_attacking_enemy_index の敵がヒロインに接近して攻撃する（流れはムチと同じ4ステート）
                     # 敵の攻撃ボイス・ヒロインのやられボイスは未実装のため再生しない
@@ -951,6 +993,9 @@ def update(dt):
                     elif battle_enemy_attack_phase == BATTLE_WHIP_PHASE_FLASH:
                         battle_enemy_attack_frame += 1
                         if battle_enemy_attack_frame >= BATTLE_WHIP_FLASH_FRAMES:
+                            # ダメージ演出完了の瞬間にヒロインのHPを更新する（0未満にはならない。0になっても現状は何も起きない）
+                            damage = random.randint(BATTLE_ENEMY_ATTACK_DAMAGE_MIN, BATTLE_ENEMY_ATTACK_DAMAGE_MAX)
+                            heroine_hp = max(0, heroine_hp - damage)
                             battle_enemy_attack_phase = BATTLE_WHIP_PHASE_RETURN
                             battle_enemy_attack_frame = 0
                     elif battle_enemy_attack_phase == BATTLE_WHIP_PHASE_RETURN:
@@ -1093,7 +1138,7 @@ def render_battle():
             blink_half = max(1, BATTLE_WHIP_FLASH_BLINK_PERIOD_FRAMES // 2)
             flash_blink_on = (battle_whip_frame // blink_half) % 2 == 0
 
-        # ★ 炎（全体攻撃）の白色点滅：ムチと同じ点滅パラメータを流用し、生存中の敵全体を同時に光らせる
+        # ★ 炎（全体攻撃）の赤色点滅：ムチと同じ点滅周期パラメータを流用し、生存中の敵全体を同時に赤く光らせる
         flame_flash_active = (battle_phase == BATTLE_PHASE_EXCHANGE
                               and battle_menu_selected_index == BATTLE_MENU_INDEX_FLAME
                               and battle_attacking_enemy_index == -1
@@ -1154,12 +1199,13 @@ def render_battle():
                 enemy_img = pygame.transform.smoothscale(enemy_img, (enemy_idle_w, enemy_idle_h))
                 # スケーリング中心 = 敵の足元：enemy_bottom_y はそのまま維持
 
-            # 攻撃対象の敵をダメージ演出として白く点滅させる（ムチ＝対象の敵のみ／炎＝生存中の敵全体）
-            is_flashing = ((whip_flash_active and flash_blink_on and i == battle_target_enemy_index)
-                           or (flame_flash_active and flame_flash_blink_on and not enemy_defeated[i]))
-            if is_flashing:
+            # 攻撃対象の敵をダメージ演出として点滅させる（ムチ＝対象の敵のみを白色点滅／炎＝生存中の敵全体を赤色点滅）
+            whip_flashing  = whip_flash_active and flash_blink_on and i == battle_target_enemy_index
+            flame_flashing = flame_flash_active and flame_flash_blink_on and not enemy_defeated[i]
+            if whip_flashing or flame_flashing:
+                flash_color = BATTLE_FLAME_FLASH_COLOR if flame_flashing else BATTLE_WHIP_FLASH_COLOR
                 enemy_img = enemy_img.copy()
-                enemy_img.fill(BATTLE_WHIP_FLASH_COLOR, special_flags=pygame.BLEND_RGB_ADD)
+                enemy_img.fill(flash_color, special_flags=pygame.BLEND_RGB_ADD)
 
             enemy_rect = enemy_img.get_rect(midbottom=(enemy_x, enemy_img_bottom_y))
 
@@ -1175,24 +1221,38 @@ def render_battle():
             elif not enemy_defeated[i]:
                 screen.blit(enemy_img, enemy_rect)
 
+            # [デバッグ表示] 敵のHPを「現在HP/最大HP」の文字列で頭上に表示する（生存中のみ）
+            if not enemy_defeated[i]:
+                enemy_hp_text = font.render(f"{enemy_hp[i]}/{GOBLIN_MAX_HP}", True, (255, 255, 255))
+                enemy_hp_rect = enemy_hp_text.get_rect(midbottom=(enemy_rect.centerx, enemy_rect.top - 4))
+                screen.blit(enemy_hp_text, enemy_hp_rect)
+
             enemy_rects.append(enemy_rect)
 
-        # ★ 攻撃対象選択カーソル（ムチ選択中、対象の敵の頭上に点滅表示する下向き三角カーソル）
-        if (battle_phase == BATTLE_PHASE_COMMAND and battle_menu_selected_index == BATTLE_MENU_INDEX_WHIP
-                and heroine_zoomout_frame >= BATTLE_HEROINE_ZOOMOUT_FRAMES
-                and 0 <= battle_target_enemy_index < len(enemy_rects)):
+        # ★ 攻撃対象選択カーソル（対象の敵の頭上に点滅表示する下向き三角カーソル）
+        # ムチ選択中：左右キーで選んだ対象1体のみ／炎選択中：全体攻撃のため生存中の敵全体に表示する
+        # HPデバッグ表示と被らないよう、頭上のクリアランスにテキスト分の高さも加味して上方へ表示する
+        if (battle_phase == BATTLE_PHASE_COMMAND and battle_menu_selected_index in (BATTLE_MENU_INDEX_WHIP, BATTLE_MENU_INDEX_FLAME)
+                and heroine_zoomout_frame >= BATTLE_HEROINE_ZOOMOUT_FRAMES):
+            if battle_menu_selected_index == BATTLE_MENU_INDEX_WHIP:
+                cursor_target_indices = [battle_target_enemy_index] if 0 <= battle_target_enemy_index < len(enemy_rects) else []
+            else:
+                cursor_target_indices = [i for i in range(len(enemy_rects)) if not enemy_defeated[i]]
+
             blink_half_period = max(1, BATTLE_TARGET_CURSOR_BLINK_PERIOD_FRAMES // 2)
-            if (battle_target_cursor_frame // blink_half_period) % 2 == 0:
-                target_rect = enemy_rects[battle_target_enemy_index]
-                cursor_cx = target_rect.centerx
-                cursor_top = target_rect.top - BATTLE_TARGET_CURSOR_MARGIN_Y - BATTLE_TARGET_CURSOR_HEIGHT
+            if cursor_target_indices and (battle_target_cursor_frame // blink_half_period) % 2 == 0:
+                hp_text_clearance = font.get_height() + 4
                 half_w = BATTLE_TARGET_CURSOR_WIDTH // 2
-                points = [
-                    (cursor_cx - half_w, cursor_top),
-                    (cursor_cx + half_w, cursor_top),
-                    (cursor_cx, cursor_top + BATTLE_TARGET_CURSOR_HEIGHT),
-                ]
-                pygame.draw.polygon(screen, BATTLE_TARGET_CURSOR_COLOR, points)
+                for idx in cursor_target_indices:
+                    target_rect = enemy_rects[idx]
+                    cursor_cx = target_rect.centerx
+                    cursor_top = target_rect.top - hp_text_clearance - BATTLE_TARGET_CURSOR_MARGIN_Y - BATTLE_TARGET_CURSOR_HEIGHT
+                    points = [
+                        (cursor_cx - half_w, cursor_top),
+                        (cursor_cx + half_w, cursor_top),
+                        (cursor_cx, cursor_top + BATTLE_TARGET_CURSOR_HEIGHT),
+                    ]
+                    pygame.draw.polygon(screen, BATTLE_TARGET_CURSOR_COLOR, points)
         screen.set_clip(None)
 
     # ★ ヒロイン後ろ姿の描画
@@ -1306,6 +1366,11 @@ def render_battle():
             if trail_b is not None:
                 blit_heroine_trail_image(battle_back_img_raw, trail_b, BATTLE_WHIP_TRAIL_ALPHA_2)
         screen.set_clip(None)
+
+        # [デバッグ表示] ヒロインのHPを「現在HP/最大HP」の文字列で頭上に表示する
+        heroine_hp_text = font.render(f"{heroine_hp}/{HEROINE_MAX_HP}", True, (255, 255, 255))
+        heroine_hp_rect = heroine_hp_text.get_rect(midbottom=(img_rect.centerx, img_rect.top - 4))
+        screen.blit(heroine_hp_text, heroine_hp_rect)
 
         # 残像履歴を更新する（実際にフレームが進んだときのみ記録し、ポーズ中の再描画で重複登録しないようにする）
         if whip_moving:
