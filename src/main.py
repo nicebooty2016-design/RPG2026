@@ -152,7 +152,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 WALK_DIR = os.path.join(BASE_DIR, "..", "assets", "images", "characters", "bunny", "bunny_walk")
 BACK_IMG_PATH = os.path.join(BASE_DIR, "..", "assets", "images", "characters", "bunny", "bunny_back.png")
 WIN_IMG_PATH  = os.path.join(BASE_DIR, "..", "assets", "images", "characters", "bunny", "bunny_win.png")
-VOICE_WIN_PATH  = os.path.join(BASE_DIR, "..", "assets", "sound", "voices", "bunny_win.mp3")
+VOICE_WIN_PATH  = os.path.join(BASE_DIR, "..", "assets", "sound", "voices", "bunny_win_0.mp3")
 VOICE_BATTLE_START_PATH = os.path.join(BASE_DIR, "..", "assets", "sound", "voices", "bunny_battle_start_0.mp3")
 BGM_BATTLE_PATH = os.path.join(BASE_DIR, "..", "assets", "sound", "bgms", "battle.mp3")
 
