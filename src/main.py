@@ -65,9 +65,10 @@ BATTLE_HEROINE_LAST_METER_TO_PIXEL  = SCREEN_W / BATTLE_HEROINE_LAST_WINDOW_WIDT
 # バトルウィンドウが開いた後の静止 → ズームアウト
 BATTLE_HEROINE_FOCUS_DELAY_FRAMES = 20  # 静止フレーム数
 BATTLE_HEROINE_ZOOMOUT_FRAMES = 60      # ズームアウトに要するフレーム数
-# 拡縮の中心状態（＝ズームアウト完了後・待機モーションの中心）で、ヒロインの足元から何m上の位置が
-# バトルウィンドウ下端に来るか。この足元位置は登場時のズームイン状態でも固定（足元基準のスケーリング）
-BATTLE_HEROINE_CENTER_FOCUS_M = 1.25
+# 注視点：ヒロインの足元から何m上の位置（＝ワールド座標系の高さ。結果的に体の特定の部位を指す）が
+# バトルウィンドウ下端に来るか。登場直後／ズームアウト完了直後それぞれで指定する
+BATTLE_HEROINE_FIRST_FOCUS_M = 0  # 登場直後
+BATTLE_HEROINE_LAST_FOCUS_M  = 1.25    # ズームアウト完了直後
 
 # バトルウィンドウ色
 BATTLE_WINDOW_COLOR = (30, 80, 200)  # バトル中のウィンドウ色
@@ -1649,9 +1650,11 @@ def render_battle():
         end_img_h   = int(HEROINE_HEIGHT_M * BATTLE_HEROINE_LAST_METER_TO_PIXEL)
         img_h = max(1, int(start_img_h + (end_img_h - start_img_h) * t_eased))
 
-        # bottom_y（ヒロインの足元位置）：登場時からズームアウト後まで一貫して、
-        # CENTER_FOCUS_M で定まる位置に固定する（足元基準のスケーリング）
-        bottom_y = band_bottom + int(BATTLE_HEROINE_CENTER_FOCUS_M * BATTLE_HEROINE_LAST_METER_TO_PIXEL)
+        # bottom_y（ヒロインの足元位置）：FIRST_FOCUS_M／LAST_FOCUS_M で定まる位置（足元基準）を
+        # それぞれ登場時／ズームアウト後の足元位置として補間する
+        bottom_y_start = band_bottom + int(BATTLE_HEROINE_FIRST_FOCUS_M * BATTLE_HEROINE_FIRST_METER_TO_PIXEL)
+        bottom_y_end   = band_bottom + int(BATTLE_HEROINE_LAST_FOCUS_M * BATTLE_HEROINE_LAST_METER_TO_PIXEL)
+        bottom_y = int(bottom_y_start + (bottom_y_end - bottom_y_start) * t_eased)
 
         heroine_x = SCREEN_W // 2
 
@@ -1842,7 +1845,7 @@ def render_result():
             else:
                 h = int(HEROINE_HEIGHT_M * BATTLE_HEROINE_LAST_METER_TO_PIXEL)
                 heroine_x = SCREEN_W // 2
-                boty = band_bottom + int(BATTLE_HEROINE_CENTER_FOCUS_M * BATTLE_HEROINE_LAST_METER_TO_PIXEL)
+                boty = band_bottom + int(BATTLE_HEROINE_LAST_FOCUS_M * BATTLE_HEROINE_LAST_METER_TO_PIXEL)
             w = max(1, int(orig_w * h / orig_h))
             img = pygame.transform.smoothscale(battle_back_img_raw, (w, h))
             alpha_img = img.copy()
