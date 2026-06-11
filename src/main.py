@@ -10,7 +10,7 @@ import ctypes
 pygame.init()
 
 SCREEN_W = 1280
-SCREEN_H = 720
+SCREEN_H = 960
 screen = pygame.display.set_mode((SCREEN_W, SCREEN_H))
 clock = pygame.time.Clock()
 
@@ -49,7 +49,7 @@ def set_titlebar_color(rgb):
 FIXED_FPS = 60
 
 # バトルメインウィンドウ（旧：黒帯）
-BATTLE_MAIN_WINDOW_HEIGHT = 640
+BATTLE_MAIN_WINDOW_HEIGHT = 800
 BATTLE_MAIN_WINDOW_ANIM_FRAMES = 10   # バトルメインウィンドウが開ききるまでのフレーム数
 
 # ヒロイン演出パラメータ
@@ -226,7 +226,15 @@ BATTLE_TARGET_CURSOR_BLINK_PERIOD_FRAMES = 30  # 点滅1周期のフレーム数
 STATE_FIELD = 0
 STATE_BATTLE = 1
 STATE_RESULT = 2
+STATE_STATUS = 3
 game_state = STATE_FIELD
+
+# ステータスウィンドウ：開閉アニメ（バトルメインウィンドウと同じサイズ・速度を流用）
+STATUS_PHASE_OPENING = 0  # 開いている途中
+STATUS_PHASE_OPEN    = 1  # 開ききって表示中（Enter／Spaceで閉じ始める）
+STATUS_PHASE_CLOSING = 2  # 閉じている途中
+status_phase      = STATUS_PHASE_OPENING
+status_anim_frame = 0
 
 battle_anim_frame = 0
 heroine_focus_delay_frame = 0
@@ -872,6 +880,7 @@ def process_input():
     global enemy_defeated, enemy_hp, battle_annihilate_targets, battle_annihilate_frame
     global is_paused, pause_step_requested
     global pause_step_key_held, pause_step_key_hold_frame, pause_step_key_repeated
+    global status_phase, status_anim_frame
 
     moving = False
     move_x = 0.0
@@ -937,6 +946,13 @@ def process_input():
                 # pygame.mixer.music.play()
                 pygame.mixer.music.stop()
 
+        # Sキー：フィールド上でステータスモードへ遷移し、ステータスウィンドウを開く
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_s and not is_paused:
+            if game_state == STATE_FIELD:
+                game_state = STATE_STATUS
+                status_phase = STATUS_PHASE_OPENING
+                status_anim_frame = 0
+
         # [開発用] Pキー：システムポーズの切り替え（フレーム処理を停止／再開。描画は継続。BGM/SEも連動して一時停止／再開）
         if event.type == pygame.KEYDOWN and event.key == pygame.K_p:
             is_paused = not is_paused
@@ -999,6 +1015,13 @@ def process_input():
             elif game_state == STATE_RESULT:
                 game_state = STATE_FIELD
                 pygame.mixer.music.fadeout(BGM_FIELD_RETURN_FADEOUT_MS)
+            elif game_state == STATE_STATUS and status_phase == STATUS_PHASE_OPEN:
+                status_phase = STATUS_PHASE_CLOSING
+
+        # Spaceキー：ステータスウィンドウを閉じてフィールドモードへ戻る（システムポーズ中は無効）
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE and not is_paused:
+            if game_state == STATE_STATUS and status_phase == STATUS_PHASE_OPEN:
+                status_phase = STATUS_PHASE_CLOSING
 
         # 矢印右キー：ポーズ中は1フレームだけ処理を進める（押し続けるとキーリピートでも進む）
         if event.type == pygame.KEYDOWN and event.key == pygame.K_RIGHT:
@@ -1063,6 +1086,21 @@ def update(dt):
     global battle_target_enemy_index
     global enemy_defeated, enemy_hp, battle_annihilate_targets, battle_annihilate_frame
     global heroine_hp
+    global status_phase, status_anim_frame
+
+    if game_state == STATE_STATUS:
+        # ステータスウィンドウの開閉アニメ（バトルメインウィンドウと同じフレーム数で開閉する）
+        if status_phase == STATUS_PHASE_OPENING:
+            if status_anim_frame < BATTLE_MAIN_WINDOW_ANIM_FRAMES:
+                status_anim_frame += 1
+            else:
+                status_phase = STATUS_PHASE_OPEN
+        elif status_phase == STATUS_PHASE_CLOSING:
+            if status_anim_frame > 0:
+                status_anim_frame -= 1
+            else:
+                game_state = STATE_FIELD
+        return
 
     if game_state == STATE_RESULT:
         # フェーズ①：フラッシュアウト（黒→白）
@@ -1829,10 +1867,27 @@ def render():
         render_field()
     elif game_state == STATE_BATTLE:
         render_battle()
+    elif game_state == STATE_STATUS:
+        render_status()
     else:  # STATE_RESULT
         render_result()
 
     pygame.display.flip()
+
+# ---------------------------------------------------------
+# render_status()：ステータスウィンドウ（バトルメインウィンドウと同じサイズ・開閉速度の黒背景ウィンドウ）
+# ---------------------------------------------------------
+def render_status():
+    render_field()
+
+    progress = min(1.0, status_anim_frame / BATTLE_MAIN_WINDOW_ANIM_FRAMES)
+    current_height = int(BATTLE_MAIN_WINDOW_HEIGHT * progress)
+
+    band_y = SCREEN_H // 2 - current_height // 2
+
+    overlay = pygame.Surface((SCREEN_W, current_height))
+    overlay.fill((0, 0, 0))
+    screen.blit(overlay, (0, band_y))
 
 # ---------------------------------------------------------
 # main()
