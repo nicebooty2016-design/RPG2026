@@ -9,8 +9,8 @@ import ctypes
 
 pygame.init()
 
-SCREEN_W = 640
-SCREEN_H = 480
+SCREEN_W = 720
+SCREEN_H = 1280
 screen = pygame.display.set_mode((SCREEN_W, SCREEN_H))
 clock = pygame.time.Clock()
 
@@ -298,8 +298,8 @@ heroine_whip_trail = []
 heroine_whip_trail_key = None  # 最後に記録したフレームの識別キー（(phase, frame)）。重複登録の防止用
 
 # [開発用] システムポーズ：Pキーでフレーム処理を停止／再開（描画は継続）。
-# ポーズ中はSpaceキーで1フレームだけ処理を進められる。
-# また、Spaceキーを押し続けた場合はキーリピートで連続して1フレームずつ進める
+# ポーズ中は矢印右キーで1フレームだけ処理を進められる。
+# また、矢印右キーを押し続けた場合はキーリピートで連続して1フレームずつ進める
 # （最初は PAUSE_STEP_REPEAT_DELAY_SEC 秒後に1回、以後は PAUSE_STEP_REPEAT_INTERVAL_SEC 秒間隔で繰り返す）
 PAUSE_STEP_REPEAT_DELAY_SEC    = 0.5  # 押し続けてから最初のリピートが発生するまでの秒数
 PAUSE_STEP_REPEAT_INTERVAL_SEC = 0.05  # 2回目以降のリピート間隔（秒）
@@ -308,8 +308,8 @@ PAUSE_STEP_REPEAT_INTERVAL_FRAMES = max(1, round(PAUSE_STEP_REPEAT_INTERVAL_SEC 
 
 is_paused = False
 pause_step_requested = False
-pause_step_key_held       = False  # Spaceキーが押され続けているか（リピート判定用）
-pause_step_key_hold_frame = 0      # Spaceキーを押し続けているフレーム数（リピート判定用カウンタ）
+pause_step_key_held       = False  # 矢印右キーが押され続けているか（リピート判定用）
+pause_step_key_hold_frame = 0      # 矢印右キーを押し続けているフレーム数（リピート判定用カウンタ）
 pause_step_key_repeated   = False  # 押し続けている間に既に1回以上リピートが発生したか（遅延／間隔の切り替え用）
 
 # ----------------------------------------------------------
@@ -705,8 +705,8 @@ def start_battle_turn():
             pygame.mixer.music.load(BGM_BATTLE_PATH)
             pygame.mixer.music.set_volume(BGM_BATTLE_VOLUME)
             pygame.mixer.music.play(start=BATTLE_DANCE_BGM_START_SEC)
-            if voice_dance:
-                voice_dance.play()
+            #if voice_dance:
+                #voice_dance.play()
         else:
             battle_whip_phase = BATTLE_WHIP_PHASE_APPROACH
             battle_whip_frame = 0
@@ -882,7 +882,7 @@ def process_input():
             pygame.quit()
             sys.exit()
 
-        if event.type == pygame.MOUSEWHEEL:
+        if event.type == pygame.MOUSEWHEEL and not is_paused:
             if event.y > 0:
                 zoom -= ZOOM_STEP
             elif event.y < 0:
@@ -893,7 +893,7 @@ def process_input():
             walk_images = load_walk_images()
             last_image = walk_images[frame_index]
 
-        if event.type == pygame.KEYDOWN and event.key == pygame.K_e:
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_e and not is_paused:
             if game_state == STATE_FIELD:
                 game_state = STATE_BATTLE
                 battle_anim_frame = 0
@@ -960,24 +960,24 @@ def process_input():
             if game_state == STATE_BATTLE:
                 enter_result_state()
 
-        # 攻撃選択サブウィンドウ：上下キーで選択位置を変更（ズームアウト完了後・コマンド選択中のみ）
-        if event.type == pygame.KEYDOWN and event.key == pygame.K_UP:
+        # 攻撃選択サブウィンドウ：上下キーで選択位置を変更（ズームアウト完了後・コマンド選択中のみ。システムポーズ中は無効）
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_UP and not is_paused:
             if (game_state == STATE_BATTLE and heroine_zoomout_frame >= BATTLE_HEROINE_ZOOMOUT_FRAMES
                     and battle_phase == BATTLE_PHASE_COMMAND):
                 battle_menu_selected_index = (battle_menu_selected_index - 1) % len(BATTLE_MENU_OPTIONS)
 
-        if event.type == pygame.KEYDOWN and event.key == pygame.K_DOWN:
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_DOWN and not is_paused:
             if (game_state == STATE_BATTLE and heroine_zoomout_frame >= BATTLE_HEROINE_ZOOMOUT_FRAMES
                     and battle_phase == BATTLE_PHASE_COMMAND):
                 battle_menu_selected_index = (battle_menu_selected_index + 1) % len(BATTLE_MENU_OPTIONS)
 
-        # ムチ選択中：左右キーで攻撃対象の敵を変更（ズームアウト完了後・コマンド選択中のみ。撃破済みの敵は選択をスキップする）
-        if event.type == pygame.KEYDOWN and event.key == pygame.K_LEFT:
+        # ムチ選択中：左右キーで攻撃対象の敵を変更（ズームアウト完了後・コマンド選択中のみ。撃破済みの敵は選択をスキップする。システムポーズ中は無効）
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_LEFT and not is_paused:
             if (game_state == STATE_BATTLE and heroine_zoomout_frame >= BATTLE_HEROINE_ZOOMOUT_FRAMES
                     and battle_phase == BATTLE_PHASE_COMMAND and battle_menu_selected_index == BATTLE_MENU_INDEX_WHIP):
                 battle_target_enemy_index = find_alive_enemy_index(battle_target_enemy_index, -1)
 
-        if event.type == pygame.KEYDOWN and event.key == pygame.K_RIGHT:
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_RIGHT and not is_paused:
             if (game_state == STATE_BATTLE and heroine_zoomout_frame >= BATTLE_HEROINE_ZOOMOUT_FRAMES
                     and battle_phase == BATTLE_PHASE_COMMAND and battle_menu_selected_index == BATTLE_MENU_INDEX_WHIP):
                 battle_target_enemy_index = find_alive_enemy_index(battle_target_enemy_index, 1)
@@ -1000,16 +1000,16 @@ def process_input():
                 game_state = STATE_FIELD
                 pygame.mixer.music.fadeout(BGM_FIELD_RETURN_FADEOUT_MS)
 
-        # Spaceキー：ポーズ中は1フレームだけ処理を進める（押し続けるとキーリピートでも進む）
-        if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
+        # 矢印右キー：ポーズ中は1フレームだけ処理を進める（押し続けるとキーリピートでも進む）
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_RIGHT:
             if is_paused:
                 pause_step_requested = True
                 pause_step_key_held       = True
                 pause_step_key_hold_frame = 0
                 pause_step_key_repeated   = False
 
-        # Spaceキーを離した瞬間：キーリピートの判定状態をリセットする
-        if event.type == pygame.KEYUP and event.key == pygame.K_SPACE:
+        # 矢印右キーを離した瞬間：キーリピートの判定状態をリセットする
+        if event.type == pygame.KEYUP and event.key == pygame.K_RIGHT:
             pause_step_key_held       = False
             pause_step_key_hold_frame = 0
             pause_step_key_repeated   = False
@@ -1025,7 +1025,7 @@ def process_input():
             pause_step_key_hold_frame = 0
             pause_step_key_repeated = True
 
-    if game_state in (STATE_BATTLE, STATE_RESULT):
+    if game_state in (STATE_BATTLE, STATE_RESULT) or is_paused:
         return
 
     keys = pygame.key.get_pressed()
