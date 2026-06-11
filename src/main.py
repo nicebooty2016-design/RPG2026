@@ -9,8 +9,8 @@ import ctypes
 
 pygame.init()
 
-SCREEN_W = 720
-SCREEN_H = 1280
+SCREEN_W = 1280
+SCREEN_H = 720
 screen = pygame.display.set_mode((SCREEN_W, SCREEN_H))
 clock = pygame.time.Clock()
 
@@ -49,7 +49,7 @@ def set_titlebar_color(rgb):
 FIXED_FPS = 60
 
 # バトルメインウィンドウ（旧：黒帯）
-BATTLE_MAIN_WINDOW_HEIGHT = 400
+BATTLE_MAIN_WINDOW_HEIGHT = 640
 BATTLE_MAIN_WINDOW_ANIM_FRAMES = 10   # バトルメインウィンドウが開ききるまでのフレーム数
 
 # ヒロイン演出パラメータ
