@@ -238,6 +238,11 @@ STATUS_PHASE_CLOSING = 2  # 閉じている途中
 status_phase      = STATUS_PHASE_OPENING
 status_anim_frame = 0
 
+# ステータスウィンドウ：表示する姿（上下キーで切り替え。デフォルトは後ろ姿）
+STATUS_VIEW_BACK  = 0
+STATUS_VIEW_FRONT = 1
+status_view = STATUS_VIEW_BACK
+
 # ステータスウィンドウ内の表示スケール：ウィンドウ幅（=SCREEN_W）がワールド座標系で何mに相当するか
 # （SCREEN_Wが変わってもステータスウィンドウの表示内容（拡縮）が変わらないよう、ここから1mあたりのピクセル数を算出する）
 STATUS_WINDOW_WIDTH_M = 4.0
@@ -411,9 +416,11 @@ tile_map = {}
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 WALK_DIR = os.path.join(BASE_DIR, "..", "assets", "images", "characters", "bunny", "bunny_walk")
 BACK_IMG_PATH = os.path.join(BASE_DIR, "..", "assets", "images", "characters", "bunny", "bunny_back.png")
+HEROINE_FRONT_IMG_PATH = os.path.join(BASE_DIR, "..", "assets", "images", "characters", "bunny", "bunny_walk", "bunny_walk_0.png")
 WIN_IMG_PATH  = os.path.join(BASE_DIR, "..", "assets", "images", "characters", "bunny", "bunny_win.png")
 DANCE_DIR = os.path.join(BASE_DIR, "..", "assets", "images", "characters", "bunny", "bunny_dance_0")
-SAMURAI_IMG_PATH = os.path.join(BASE_DIR, "..", "assets", "images", "characters", "shota", "shota_front.png")
+SAMURAI_FRONT_IMG_PATH = os.path.join(BASE_DIR, "..", "assets", "images", "characters", "shota", "shota_front.png")
+SAMURAI_BACK_IMG_PATH  = os.path.join(BASE_DIR, "..", "assets", "images", "characters", "shota", "shota_back.png")
 ENEMY_GOBLIN_IMG_PATH = os.path.join(BASE_DIR, "..", "assets", "images", "enemies", "goblin", "goblin_idle.png")
 VOICES_DIR = os.path.join(BASE_DIR, "..", "assets", "sound", "voices")
 VOICE_GOBLIN_DAMAGED_PATH = os.path.join(BASE_DIR, "..", "assets", "sound", "voices", "goblin_damaged.wav")
@@ -465,7 +472,9 @@ battle_back_img_raw = None  # 後ろ姿画像（オリジナル）
 result_win_img      = None  # 勝利バストショット画像（スケール後）
 result_win_img_raw  = None  # 勝利バストショット画像（オリジナル）
 enemy_img_raw       = None  # 敵（goblin）画像（オリジナル）
-samurai_img_raw     = None  # サムライ画像（オリジナル）
+heroine_front_img_raw = None  # ヒロイン前姿画像（オリジナル） — ステータスウィンドウ用
+samurai_front_img_raw = None  # サムライ前姿画像（オリジナル） — ステータスウィンドウ用
+samurai_back_img_raw  = None  # サムライ後ろ姿画像（オリジナル） — ステータスウィンドウ用
 dance_images_raw    = []  # マカダンス演出用画像（bunny_dance_0_<番号>.png を番号順に並べたリスト。スケールは描画時に行う）
 voice_win_by_number = {}  # 勝利ボイス（{番号: Sound}。bunny_win_<番号>.mp3 の番号をキーとし、リザルト開始時にランダム選択する）
 result_win_voice         = None  # リザルト開始時に選ばれた勝利ボイス（再生・長さ判定用）
@@ -777,7 +786,8 @@ def advance_battle_turn():
 # ---------------------------------------------------------
 def initialize():
     global tile_map, walk_images, last_image, battle_back_img, battle_back_img_raw
-    global result_win_img, result_win_img_raw, enemy_img_raw, samurai_img_raw, dance_images_raw, voice_win_by_number
+    global result_win_img, result_win_img_raw, enemy_img_raw, dance_images_raw, voice_win_by_number
+    global heroine_front_img_raw, samurai_front_img_raw, samurai_back_img_raw
     global voice_battle_start_list, voice_attack_by_number, voice_goblin_damaged, voice_dance
     global player_world_x, player_world_y
 
@@ -813,8 +823,10 @@ def initialize():
     # ★ 敵（goblin）画像を読み込み（描画時にスケールするためオリジナルのみ保持）
     enemy_img_raw = pygame.image.load(ENEMY_GOBLIN_IMG_PATH).convert_alpha()
 
-    # ★ サムライ画像を読み込み（描画時にスケールするためオリジナルのまま保持）
-    samurai_img_raw = pygame.image.load(SAMURAI_IMG_PATH).convert_alpha()
+    # ★ ステータスウィンドウ用：ヒロイン・サムライの前姿／後ろ姿画像を読み込み（描画時にスケールするためオリジナルのまま保持）
+    heroine_front_img_raw = pygame.image.load(HEROINE_FRONT_IMG_PATH).convert_alpha()
+    samurai_front_img_raw = pygame.image.load(SAMURAI_FRONT_IMG_PATH).convert_alpha()
+    samurai_back_img_raw  = pygame.image.load(SAMURAI_BACK_IMG_PATH).convert_alpha()
 
     # ★ マカダンス演出用画像を読み込み（描画時にスケールするためオリジナルのまま保持）
     dance_images_raw = load_dance_images()
@@ -899,7 +911,7 @@ def process_input():
     global enemy_defeated, enemy_hp, battle_annihilate_targets, battle_annihilate_frame
     global is_paused, pause_step_requested
     global pause_step_key_held, pause_step_key_hold_frame, pause_step_key_repeated
-    global status_phase, status_anim_frame
+    global status_phase, status_anim_frame, status_view
     global is_debug
 
     moving = False
@@ -972,6 +984,7 @@ def process_input():
                 game_state = STATE_STATUS
                 status_phase = STATUS_PHASE_OPENING
                 status_anim_frame = 0
+                status_view = STATUS_VIEW_BACK
 
         # [開発用] Pキー：システムポーズの切り替え（フレーム処理を停止／再開。描画は継続。BGM/SEも連動して一時停止／再開）
         if event.type == pygame.KEYDOWN and event.key == pygame.K_p:
@@ -1010,6 +1023,11 @@ def process_input():
             if (game_state == STATE_BATTLE and heroine_zoomout_frame >= BATTLE_HEROINE_ZOOMOUT_FRAMES
                     and battle_phase == BATTLE_PHASE_COMMAND):
                 battle_menu_selected_index = (battle_menu_selected_index + 1) % len(BATTLE_MENU_OPTIONS)
+
+        # ステータスモード：上下キーでキャラクターの前姿／後ろ姿を切り替え（システムポーズ中は無効）
+        if event.type == pygame.KEYDOWN and event.key in (pygame.K_UP, pygame.K_DOWN) and not is_paused:
+            if game_state == STATE_STATUS and status_phase == STATUS_PHASE_OPEN:
+                status_view = STATUS_VIEW_FRONT if status_view == STATUS_VIEW_BACK else STATUS_VIEW_BACK
 
         # ムチ選択中：左右キーで攻撃対象の敵を変更（ズームアウト完了後・コマンド選択中のみ。撃破済みの敵は選択をスキップする。システムポーズ中は無効）
         if event.type == pygame.KEYDOWN and event.key == pygame.K_LEFT and not is_paused:
@@ -1924,11 +1942,15 @@ def render_status():
     clip_rect = pygame.Rect(0, band_y, SCREEN_W, current_height)
     screen.set_clip(clip_rect)
 
-    if battle_back_img_raw:
+    # ★ 上下キーで前姿／後ろ姿を切り替え（デフォルトは後ろ姿）
+    heroine_img_raw = heroine_front_img_raw if status_view == STATUS_VIEW_FRONT else battle_back_img_raw
+    samurai_img_raw = samurai_front_img_raw if status_view == STATUS_VIEW_FRONT else samurai_back_img_raw
+
+    if heroine_img_raw:
         img_h = int(HEROINE_HEIGHT_M * STATUS_METER_TO_PIXEL)
-        orig_w, orig_h = battle_back_img_raw.get_size()
+        orig_w, orig_h = heroine_img_raw.get_size()
         img_w = max(1, int(orig_w * img_h / orig_h))
-        img = pygame.transform.smoothscale(battle_back_img_raw, (img_w, img_h))
+        img = pygame.transform.smoothscale(heroine_img_raw, (img_w, img_h))
         img_rect = img.get_rect(midbottom=(cx - half_spacing_px, band_bottom))
         screen.blit(img, img_rect)
         if is_debug:
