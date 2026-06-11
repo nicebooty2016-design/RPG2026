@@ -9,7 +9,7 @@ import ctypes
 
 pygame.init()
 
-SCREEN_W = 320
+SCREEN_W = 1280
 SCREEN_ASPECT_RATIO = (4, 3)  # 画面の横：縦比率（例：(4, 3) や (16, 9)）。SCREEN_HはSCREEN_Wとこの比率から自動算出される
 SCREEN_H = SCREEN_W * SCREEN_ASPECT_RATIO[1] // SCREEN_ASPECT_RATIO[0]
 screen = pygame.display.set_mode((SCREEN_W, SCREEN_H))
@@ -1759,7 +1759,6 @@ def render_battle():
         dance_orig_w, dance_orig_h = dance_raw.get_size()
         dance_img_w = max(1, int(SCREEN_W / BATTLE_DANCE_BODY_WIDTH_RATIO))
         dance_img_h = max(1, int(dance_orig_h * dance_img_w / dance_orig_w))
-        dance_img = pygame.transform.smoothscale(dance_raw, (dance_img_w, dance_img_h))
 
         scroll_t = (battle_dance_frame / BATTLE_DANCE_SCROLL_FRAMES) if BATTLE_DANCE_SCROLL_FRAMES > 0 else 1.0
         scroll_t = max(0.0, min(1.0, scroll_t))
@@ -1768,12 +1767,30 @@ def render_battle():
         dance_bottom_y = int(start_bottom_y + (end_bottom_y - start_bottom_y) * scroll_t)
 
         clip_rect = pygame.Rect(0, band_y, SCREEN_W, current_height)
-        screen.set_clip(clip_rect)
-        dance_img_rect = dance_img.get_rect(midbottom=(SCREEN_W // 2, dance_bottom_y))
-        screen.blit(dance_img, dance_img_rect)
+        dance_img_rect = pygame.Rect(0, 0, dance_img_w, dance_img_h)
+        dance_img_rect.midbottom = (SCREEN_W // 2, dance_bottom_y)
+
+        # ★ 巨大なdance_img_w×dance_img_hサイズへの全体スケーリングは行わず、
+        #   実際にウィンドウ内に表示される範囲だけを元画像から切り出してスケーリングする
+        #   （全体スケーリングだと出力ピクセル数がSCREEN_Wの2乗に比例して増加し、メモリ・速度の両面で問題になるため）
+        visible_rect = dance_img_rect.clip(clip_rect)
+        if visible_rect.width > 0 and visible_rect.height > 0:
+            scale = dance_img_w / dance_orig_w
+            src_rect = pygame.Rect(
+                int((visible_rect.x - dance_img_rect.x) / scale),
+                int((visible_rect.y - dance_img_rect.y) / scale),
+                max(1, math.ceil(visible_rect.width / scale)),
+                max(1, math.ceil(visible_rect.height / scale)),
+            )
+            src_rect = src_rect.clip(pygame.Rect(0, 0, dance_orig_w, dance_orig_h))
+            if src_rect.width > 0 and src_rect.height > 0:
+                dance_sub = dance_raw.subsurface(src_rect)
+                dance_img = pygame.transform.smoothscale(dance_sub, (visible_rect.width, visible_rect.height))
+                screen.blit(dance_img, visible_rect.topleft)
         if is_debug:
+            screen.set_clip(clip_rect)
             pygame.draw.rect(screen, (255, 255, 255), dance_img_rect, 1)  # ★ [デバッグ] 元画像サイズの枠線
-        screen.set_clip(None)
+            screen.set_clip(None)
 
     # ★ 敵（goblin）の描画：黒シルエット → 通常表示への解除（ヒロインの奥＝先に描画）
     if enemy_img_raw:
