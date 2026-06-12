@@ -307,7 +307,7 @@ battle_samurai_menu_selected_index = 0
 battle_samurai_target_enemy_index  = 0  # 剣選択中に左右キーで選べる攻撃対象（ENEMY_X_RATIOSのインデックス）
 
 # AIユーザモード：ON時はコマンド選択・リザルト画面の進行を自動操作する（process_ai_battle_input()）
-ai_mode_active = False
+ai_mode_active = True
 
 # AIユーザモード：コマンド選択（行動メニュー → 必要なら攻撃対象）の自動操作の進行状態
 AI_COMMAND_STEP_DECIDE        = 0  # 行動・対象をまだ決定していない（このフェーズに入った直後）
@@ -397,7 +397,7 @@ PAUSE_STEP_REPEAT_INTERVAL_FRAMES = max(1, round(PAUSE_STEP_REPEAT_INTERVAL_SEC 
 
 # [開発用] デバッグ状態：Dキーで切り替え（モードに関係なくゲーム中ずっと保持される）。
 # ONの間は、開発・バグ調査に有益な情報（足元コライダ表示、キャラ画像の枠など）を表示する。デフォルトON
-is_debug = True
+is_debug = False
 
 is_paused = False
 pause_step_requested = False
@@ -444,6 +444,8 @@ PLAYER_COLLIDER_RADIUS = 0.25
 METER_TO_PIXEL = 64
 HEROINE_HEIGHT_M = 2.0  # ヒロインの身長（メートル）
 SAMURAI_HEIGHT_M = 1.5  # サムライの身長（メートル）
+ENEMY_GOBLIN_HEIGHT_M = 1.2  # ゴブリンの身長（メートル）。立ち姿画像のデバッグ表示（実際の絵の上端の算出）に使用
+HP_GRAYSCALE_DARKNESS = 0.5  # HP低下によるグレースケール表示の暗さ（1=通常のグレースケール、0=真っ黒）
 TILE_SIZE_M = 2.0
 
 def heroine_height_px():
@@ -513,12 +515,14 @@ def load_walk_images():
     images = []
     for fname in files:
         img = pygame.image.load(os.path.join(WALK_DIR, fname)).convert_alpha()
+        # ★ [デバッグ] 各歩行画像で実際の絵が始まる高さをワールド座標系（メートル）で記録する
+        character_art_top_height_m[fname] = scan_art_top_height_m(img, HEROINE_HEIGHT_M)
         w, h = img.get_size()
         scale = heroine_height_px() / h
         img = pygame.transform.smoothscale(img, (int(w * scale), heroine_height_px()))
         images.append(img)
 
-    return images
+    return images, files
 
 # ---------------------------------------------------------
 # load_dance_images()：bunny_dance_0_<番号>.png を全て検出して読み込む
@@ -535,7 +539,22 @@ def load_dance_images():
 
     return [pygame.image.load(os.path.join(DANCE_DIR, fname)).convert_alpha() for fname in files]
 
+# ---------------------------------------------------------
+# scan_art_top_height_m()：
+# 立ち姿画像を上端の行から走査し、アルファ値が0でないピクセルを最初に含む行を探す。
+# その行から画像下端（足元）までのピクセル高さを、画像全体の高さが height_m に相当するものとして
+# ワールド座標系の高さ（メートル）に変換して返す（is_debug時の緑線表示で、ズームや拡縮に関わらず
+# 「実際のキャラ絵の上端」の位置を再算出できるようにするため）
+# ---------------------------------------------------------
+def scan_art_top_height_m(img_raw, height_m):
+    orig_w, orig_h = img_raw.get_size()
+    mask = pygame.mask.from_surface(img_raw, 0)
+    rects = mask.get_bounding_rects()
+    top_row = min((r.top for r in rects), default=0)
+    return (orig_h - top_row) / orig_h * height_m
+
 walk_images = []
+walk_image_filenames = []  # walk_imagesと対応するファイル名のリスト（緑線デバッグ表示・HPグレースケールでcharacter_art_top_height_mを参照する際のkeyに使用）
 frame_index = 0
 frame_timer = 0
 FRAME_INTERVAL = 1
@@ -551,6 +570,8 @@ enemy_img_raw       = None  # 敵（goblin）画像（オリジナル）
 heroine_front_img_raw = None  # ヒロイン前姿画像（オリジナル） — ステータスウィンドウ用
 samurai_front_img_raw = None  # サムライ前姿画像（オリジナル） — ステータスウィンドウ用
 samurai_back_img_raw  = None  # サムライ後ろ姿画像（オリジナル） — ステータスウィンドウ用
+character_art_top_height_m = {}  # 各立ち姿画像で実際の絵が始まる高さ（{ファイル名: 画像下端からの高さ（メートル）}）。is_debug時の緑線表示・HPグレースケール表示に使用
+hp_grayscale_cache = {}  # HPに応じたグレースケール合成画像のキャッシュ（{(ファイル名, 現在HP, 最大HP): Surface}）
 dance_images_raw    = []  # マカダンス演出用画像（bunny_dance_0_<番号>.png を番号順に並べたリスト。スケールは描画時に行う）
 voice_win_by_number = {}  # 勝利ボイス（{番号: Sound}。bunny_win_<番号>.mp3 の番号をキーとし、リザルト開始時にランダム選択する）
 voice_samurai_win_by_number = {}  # 勝利ボイス（サムライがトドメを刺した場合）（{番号: Sound}。shota_win_<番号>.mp3）
@@ -961,9 +982,9 @@ def advance_battle_turn():
 # initialize()
 # ---------------------------------------------------------
 def initialize():
-    global tile_map, walk_images, last_image, battle_back_img, battle_back_img_raw
+    global tile_map, walk_images, walk_image_filenames, last_image, battle_back_img, battle_back_img_raw
     global result_win_img, result_win_img_raw, result_samurai_win_img, enemy_img_raw, dance_images_raw, voice_win_by_number, voice_samurai_win_by_number
-    global heroine_front_img_raw, samurai_front_img_raw, samurai_back_img_raw
+    global heroine_front_img_raw, samurai_front_img_raw, samurai_back_img_raw, character_art_top_height_m
     global voice_battle_start_list, voice_samurai_battle_start_list, voice_samurai_attack_list, voice_attack_by_number, voice_goblin_damaged, voice_dance
     global player_world_x, player_world_y
 
@@ -971,7 +992,7 @@ def initialize():
         for mx in range(TILE_MIN, TILE_MAX + 1):
             tile_map[(mx, my)] = random.choice(TILE_LIST)
 
-    walk_images = load_walk_images()
+    walk_images, walk_image_filenames = load_walk_images()
     last_image = walk_images[0]
 
     # ★ 後ろ姿画像を読み込み → スケール
@@ -1007,9 +1028,17 @@ def initialize():
     enemy_img_raw = pygame.image.load(ENEMY_GOBLIN_IMG_PATH).convert_alpha()
 
     # ★ ステータスウィンドウ用：ヒロイン・サムライの前姿／後ろ姿画像を読み込み（描画時にスケールするためオリジナルのまま保持）
+    # （bunny_front.pngは未用意のため、代わりにヒロインの前姿として既存のbunny_walk_0.pngを使う）
     heroine_front_img_raw = pygame.image.load(HEROINE_FRONT_IMG_PATH).convert_alpha()
     samurai_front_img_raw = pygame.image.load(SAMURAI_FRONT_IMG_PATH).convert_alpha()
     samurai_back_img_raw  = pygame.image.load(SAMURAI_BACK_IMG_PATH).convert_alpha()
+
+    # ★ [デバッグ] 立ち姿画像ごとに「実際のキャラ絵が始まる高さ」をワールド座標系（メートル）で算出して記録する
+    character_art_top_height_m["goblin_idle.png"] = scan_art_top_height_m(enemy_img_raw, ENEMY_GOBLIN_HEIGHT_M)
+    character_art_top_height_m["bunny_front.png"] = scan_art_top_height_m(heroine_front_img_raw, HEROINE_HEIGHT_M)
+    character_art_top_height_m["bunny_back.png"]  = scan_art_top_height_m(battle_back_img_raw, HEROINE_HEIGHT_M)
+    character_art_top_height_m["shota_front.png"] = scan_art_top_height_m(samurai_front_img_raw, SAMURAI_HEIGHT_M)
+    character_art_top_height_m["shota_back.png"]  = scan_art_top_height_m(samurai_back_img_raw, SAMURAI_HEIGHT_M)
 
     # ★ マカダンス演出用画像を読み込み（描画時にスケールするためオリジナルのまま保持）
     dance_images_raw = load_dance_images()
@@ -1324,7 +1353,7 @@ def process_ai_battle_input():
 # process_input()
 # ---------------------------------------------------------
 def process_input():
-    global zoom, walk_images, last_image
+    global zoom, walk_images, walk_image_filenames, last_image
     global move_x, move_y
     global moving
     global game_state
@@ -1352,7 +1381,7 @@ def process_input():
 
             zoom = max(ZOOM_MIN, min(ZOOM_MAX, zoom))
 
-            walk_images = load_walk_images()
+            walk_images, walk_image_filenames = load_walk_images()
             last_image = walk_images[frame_index]
 
         if event.type == pygame.KEYDOWN and event.key == pygame.K_e and not is_paused:
@@ -1820,10 +1849,14 @@ def render_field():
         pygame.draw.rect(screen, color, rect)
 
     sx, sy = world_to_screen(player_world_x, player_world_y)
-    rect = last_image.get_rect(midbottom=(sx, sy))
-    screen.blit(last_image, rect)
+    # ★ 現在HPに応じて、画像下部（絵の範囲のうち減った体力分）をグレースケール化する
+    walk_filename = walk_image_filenames[frame_index]
+    display_image = apply_hp_grayscale(last_image, walk_filename, HEROINE_HEIGHT_M, heroine_hp, HEROINE_MAX_HP)
+    rect = display_image.get_rect(midbottom=(sx, sy))
+    screen.blit(display_image, rect)
     if is_debug:
         pygame.draw.rect(screen, (255, 255, 255), rect, 1)  # ★ [デバッグ] 元画像サイズの枠線
+        draw_art_top_debug_line(walk_filename, HEROINE_HEIGHT_M, sy, display_image.get_height(), rect.left, rect.right)  # ★ [デバッグ] 実際の絵の上端
 
     screen.blit(font.render(f"FPS: {clock.get_fps():.1f}", True, (255, 255, 255)), (DEBUG_TEXT_MARGIN, DEBUG_TEXT_MARGIN + 0 * DEBUG_TEXT_LINE_HEIGHT))
     screen.blit(font.render(f"Player: ({player_world_x:.2f}, {player_world_y:.2f})", True, (255, 255, 255)), (DEBUG_TEXT_MARGIN, DEBUG_TEXT_MARGIN + 1 * DEBUG_TEXT_LINE_HEIGHT))
@@ -1892,6 +1925,63 @@ def blit_heroine_trail_image(raw_img, pos, alpha, clip_rect):
         screen.blit(trail_img, trail_pos)
     if is_debug:
         pygame.draw.rect(screen, (255, 255, 255), trail_rect, 1)  # ★ [デバッグ] 元画像サイズの枠線
+
+# ---------------------------------------------------------
+# draw_art_top_debug_line(filename, char_height_m, bottom_y, img_h, x_left, x_right)：
+# character_art_top_height_m に記録された「実際のキャラ絵が始まる高さ」をもとに、
+# 現在の表示足元位置(bottom_y)・表示高さ(img_h)に合わせて緑色の横線を描画する（is_debug用）
+# ---------------------------------------------------------
+def draw_art_top_debug_line(filename, char_height_m, bottom_y, img_h, x_left, x_right):
+    art_height_m = character_art_top_height_m.get(filename)
+    if art_height_m is None or char_height_m <= 0:
+        return
+    line_y = bottom_y - int(img_h * art_height_m / char_height_m)
+    pygame.draw.line(screen, (0, 255, 0), (x_left, line_y), (x_right, line_y), 1)
+
+# ---------------------------------------------------------
+# apply_hp_grayscale(img_raw, filename, char_height_m, current_hp, max_hp)：
+# HPの残量に応じて、画像の「実際の絵が始まる行」(character_art_top_height_mで算出済み)から
+# 画像下端までの範囲を、下から (1 - 現在HP/最大HP) の割合だけグレースケール化した画像を返す
+# （HP満タンなら元画像のまま、HP0なら絵の範囲全体がグレースケールになる）
+# グレースケール部分の明るさはHP_GRAYSCALE_DARKNESSで調整する（1=通常のグレースケール、0=真っ黒）
+# ---------------------------------------------------------
+def apply_hp_grayscale(img_raw, filename, char_height_m, current_hp, max_hp):
+    hp_ratio = max(0.0, min(1.0, current_hp / max_hp)) if max_hp > 0 else 1.0
+    if hp_ratio >= 1.0:
+        return img_raw
+
+    cache_key = (filename, current_hp, max_hp)
+    cached = hp_grayscale_cache.get(cache_key)
+    if cached is not None:
+        return cached
+
+    art_height_m = character_art_top_height_m.get(filename)
+    if art_height_m is None or char_height_m <= 0:
+        return img_raw
+
+    orig_w, orig_h = img_raw.get_size()
+    art_top_row = max(0, min(orig_h, int(orig_h * (1 - art_height_m / char_height_m))))
+    gray_row_start = int(art_top_row + (orig_h - art_top_row) * hp_ratio)
+    if gray_row_start >= orig_h:
+        return img_raw
+
+    result = img_raw.copy()
+    gray_rect = pygame.Rect(0, gray_row_start, orig_w, orig_h - gray_row_start)
+    gray_sub = pygame.transform.grayscale(img_raw.subsurface(gray_rect))
+    # HP_GRAYSCALE_DARKNESSに応じてグレースケール画像のRGBを暗くする（1=そのまま、0=真っ黒。アルファは変えない）
+    darkness = max(0.0, min(1.0, HP_GRAYSCALE_DARKNESS))
+    darken_amount = int(round(255 * darkness))
+    darken_overlay = pygame.Surface(gray_sub.get_size(), pygame.SRCALPHA)
+    darken_overlay.fill((darken_amount, darken_amount, darken_amount, 255))
+    gray_sub.blit(darken_overlay, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+    # 通常のblitはアルファ合成されてしまうため、対象範囲を一旦透明にしてからBLEND_RGBA_MAXで上書きし、
+    # グレースケール画像のRGBA値をそのまま（合成せず）コピーする
+    target = result.subsurface(gray_rect)
+    target.fill((0, 0, 0, 0))
+    target.blit(gray_sub, (0, 0), special_flags=pygame.BLEND_RGBA_MAX)
+
+    hp_grayscale_cache[cache_key] = result
+    return result
 
 # ---------------------------------------------------------
 # render_battle()
@@ -2106,7 +2196,9 @@ def render_battle():
                 # スケーリング中心 = 敵の足元：enemy_bottom_y はそのまま維持
 
             # ★ 表示に必要な範囲だけを元画像から切り出してスケーリングする（マカダンスと同じ対策）
-            enemy_img, enemy_pos, enemy_rect = smoothscale_visible(enemy_img_raw, final_img_w, final_img_h, (enemy_x, enemy_img_bottom_y), clip_rect)
+            # ★ 現在HPに応じて、画像下部（絵の範囲のうち減った体力分）をグレースケール化する
+            enemy_display_img_raw = apply_hp_grayscale(enemy_img_raw, "goblin_idle.png", ENEMY_GOBLIN_HEIGHT_M, enemy_hp[i], GOBLIN_MAX_HP)
+            enemy_img, enemy_pos, enemy_rect = smoothscale_visible(enemy_display_img_raw, final_img_w, final_img_h, (enemy_x, enemy_img_bottom_y), clip_rect)
 
             if enemy_img is not None:
                 # 黒シルエット → 通常表示：ズームアウト完了直後から数フレームかけて解除
@@ -2134,10 +2226,12 @@ def render_battle():
                         screen.blit(enemy_img, enemy_pos)
                         if is_debug:
                             pygame.draw.rect(screen, (255, 255, 255), enemy_rect, 1)  # ★ [デバッグ] 元画像サイズの枠線
+                            draw_art_top_debug_line("goblin_idle.png", ENEMY_GOBLIN_HEIGHT_M, enemy_img_bottom_y, final_img_h, enemy_rect.left, enemy_rect.right)  # ★ [デバッグ] 実際の絵の上端
                 elif not enemy_defeated[i]:
                     screen.blit(enemy_img, enemy_pos)
                     if is_debug:
                         pygame.draw.rect(screen, (255, 255, 255), enemy_rect, 1)  # ★ [デバッグ] 元画像サイズの枠線
+                        draw_art_top_debug_line("goblin_idle.png", ENEMY_GOBLIN_HEIGHT_M, enemy_img_bottom_y, final_img_h, enemy_rect.left, enemy_rect.right)  # ★ [デバッグ] 実際の絵の上端
 
             # [デバッグ表示] 敵のHPを「現在HP/最大HP」の文字列で頭上に表示する（生存中のみ）
             if not enemy_defeated[i]:
@@ -2237,7 +2331,9 @@ def render_battle():
             # スケーリング中心 = キャラ下端：bottom_y はそのまま維持
 
         # ★ 表示に必要な範囲だけを元画像から切り出してスケーリングする（マカダンスと同じ対策）
-        img, img_pos, img_rect = smoothscale_visible(battle_back_img_raw, final_img_w, final_img_h, (heroine_x, bottom_y), clip_rect)
+        # ★ 現在HPに応じて、画像下部（絵の範囲のうち減った体力分）をグレースケール化する
+        heroine_display_img_raw = apply_hp_grayscale(battle_back_img_raw, "bunny_back.png", HEROINE_HEIGHT_M, heroine_hp, HEROINE_MAX_HP)
+        img, img_pos, img_rect = smoothscale_visible(heroine_display_img_raw, final_img_w, final_img_h, (heroine_x, bottom_y), clip_rect)
 
         # ★ 敵の攻撃を受けた際の白色点滅（ダメージ表現。ムチ被弾時の敵の点滅と同じ手法）
         heroine_flash_active = (battle_phase == BATTLE_PHASE_EXCHANGE
@@ -2292,6 +2388,7 @@ def render_battle():
                     blit_heroine_trail_image(battle_back_img_raw, trail_b, BATTLE_WHIP_TRAIL_ALPHA_2, clip_rect)
             if is_debug:
                 pygame.draw.rect(screen, (255, 255, 255), img_rect, 1)  # ★ [デバッグ] 元画像サイズの枠線
+                draw_art_top_debug_line("bunny_back.png", HEROINE_HEIGHT_M, bottom_y, final_img_h, img_rect.left, img_rect.right)  # ★ [デバッグ] 実際の絵の上端
             screen.set_clip(None)
 
             # [デバッグ表示] ヒロインのHPを「現在HP/最大HP」の文字列で頭上に表示する
@@ -2350,7 +2447,9 @@ def render_battle():
                 sam_final_h = max(1, int(sam_img_h * idle_sy))
 
             # ★ 表示に必要な範囲だけを元画像から切り出してスケーリングする（マカダンスと同じ対策）
-            sam_img, sam_img_pos, sam_img_rect = smoothscale_visible(samurai_back_img_raw, sam_final_w, sam_final_h, (sam_x, sam_bottom_y), clip_rect)
+            # ★ 現在HPに応じて、画像下部（絵の範囲のうち減った体力分）をグレースケール化する
+            samurai_display_img_raw = apply_hp_grayscale(samurai_back_img_raw, "shota_back.png", SAMURAI_HEIGHT_M, samurai_hp, SAMURAI_MAX_HP)
+            sam_img, sam_img_pos, sam_img_rect = smoothscale_visible(samurai_display_img_raw, sam_final_w, sam_final_h, (sam_x, sam_bottom_y), clip_rect)
 
             # ★ 敵の攻撃を受けた際の白色点滅（攻撃対象がサムライの場合のみ。ヒロインの被弾点滅と同じ手法）
             samurai_flash_active = (battle_phase == BATTLE_PHASE_EXCHANGE
@@ -2410,6 +2509,7 @@ def render_battle():
                         blit_heroine_trail_image(samurai_back_img_raw, sam_trail_b, BATTLE_WHIP_TRAIL_ALPHA_2, clip_rect)
                 if is_debug:
                     pygame.draw.rect(screen, (255, 255, 255), sam_img_rect, 1)  # ★ [デバッグ] 元画像サイズの枠線
+                    draw_art_top_debug_line("shota_back.png", SAMURAI_HEIGHT_M, sam_bottom_y, sam_final_h, sam_img_rect.left, sam_img_rect.right)  # ★ [デバッグ] 実際の絵の上端
                 screen.set_clip(None)
 
                 # [デバッグ表示] サムライのHPを「現在HP/最大HP」の文字列で頭上に表示する
@@ -2663,6 +2763,8 @@ def render_status():
         screen.blit(img, img_rect)
         if is_debug:
             pygame.draw.rect(screen, (255, 255, 255), img_rect, 1)  # ★ [デバッグ] 元画像サイズの枠線
+            heroine_art_key = "bunny_front.png" if status_view == STATUS_VIEW_FRONT else "bunny_back.png"
+            draw_art_top_debug_line(heroine_art_key, HEROINE_HEIGHT_M, band_bottom, img_h, img_rect.left, img_rect.right)  # ★ [デバッグ] 実際の絵の上端
 
     if samurai_img_raw:
         img_h = int(SAMURAI_HEIGHT_M * STATUS_METER_TO_PIXEL)
@@ -2673,6 +2775,8 @@ def render_status():
         screen.blit(img, img_rect)
         if is_debug:
             pygame.draw.rect(screen, (255, 255, 255), img_rect, 1)  # ★ [デバッグ] 元画像サイズの枠線
+            samurai_art_key = "shota_front.png" if status_view == STATUS_VIEW_FRONT else "shota_back.png"
+            draw_art_top_debug_line(samurai_art_key, SAMURAI_HEIGHT_M, band_bottom, img_h, img_rect.left, img_rect.right)  # ★ [デバッグ] 実際の絵の上端
 
     screen.set_clip(None)
 
