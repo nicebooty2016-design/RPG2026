@@ -207,12 +207,10 @@ BATTLE_WHIP_TRAIL_MIN_OFFSET_PX = 2    # 残像を表示する最小の位置差
 BATTLE_WHIP_DAMAGE_DELAY_FRAMES = 10        # 最接近（攻撃ボイス再生開始）から敵の白色点滅開始までのフレーム数
 BATTLE_WHIP_FLASH_FRAMES = 10               # 敵の白色点滅の継続フレーム数（経過後、即座に後退を開始する）
 BATTLE_WHIP_FLASH_BLINK_PERIOD_FRAMES = 4   # 点滅1周期のフレーム数
-BATTLE_WHIP_FLASH_COLOR = (255, 255, 255)   # 点滅時に重ねる色（白）
 BATTLE_ANNIHILATE_FRAMES = 15               # 撃破した敵の殲滅演出（アルファ値を下げて消滅させる）にかけるフレーム数（ムチ・炎共通）
 
-# 炎（全体攻撃）演出パラメータ：その場で詠唱（攻撃ボイス再生 → 待機） → 敵全体を同時に赤色点滅
-BATTLE_FLAME_CAST_DELAY_FRAMES = 60         # 攻撃ボイス再生から敵全体への赤色点滅開始までの待機フレーム数
-BATTLE_FLAME_FLASH_COLOR = (255, 0, 0)      # 炎の点滅時に重ねる色（赤。ムチの白色点滅と区別するため）
+# 炎（全体攻撃）演出パラメータ：その場で詠唱（攻撃ボイス再生 → 待機） → 敵全体に同時にダメージ表現アニメーションを適用
+BATTLE_FLAME_CAST_DELAY_FRAMES = 60         # 攻撃ボイス再生から敵全体へのダメージ表現開始までの待機フレーム数
 
 # マカダンス（味方バフ）演出パラメータ：ヒロインが画面下に消える → バトルウィンドウがピンクに染まりセクシーダンスを再生
 # （仲間がいない現状はバフ対象が存在しないため、演出終了後はそのまま次の番へ進む）
@@ -334,9 +332,15 @@ enemy_hp   = [GOBLIN_MAX_HP] * len(ENEMY_X_RATIOS)
 # ダメージ表現アニメーション：HP更新時、見た目への反映を2段階に分けて行う
 # ①DAMAGE_FLASH_FRAMES：表示HPは更新前のまま、更新前→更新後の差分範囲を白く点滅させる
 # ②DAMAGE_TRANSITION_FRAMES：表示HPを更新前→更新後へ線形に追従させる（グレースケール範囲が滑らかに広がる）
-DAMAGE_FLASH_FRAMES = 15
-DAMAGE_TRANSITION_FRAMES = 15
+DAMAGE_FLASH_FRAMES = 16
+DAMAGE_TRANSITION_FRAMES = 8
 DAMAGE_FLASH_BLINK_PERIOD_FRAMES = 4  # ①の点滅周期（既存の被弾点滅と合わせる）
+
+# ダメージ表現アニメーション：①の点滅色を行動ごとに指定する（行動ごとに調整できるようパラメータ化）
+DAMAGE_FLASH_COLOR_WHIP         = (255, 255, 255)  # ムチによるダメージの点滅色（白）
+DAMAGE_FLASH_COLOR_SWORD        = (255, 255, 255)  # 剣によるダメージの点滅色（白）
+DAMAGE_FLASH_COLOR_FLAME        = (255, 0, 0)      # 炎によるダメージの点滅色（赤）
+DAMAGE_FLASH_COLOR_ENEMY_ATTACK = (255, 255, 255)  # 敵の攻撃によるダメージの点滅色（白）
 
 # ダメージ表現アニメーション：HP更新直前の表示HP（old）→更新後の実HP（new）への変化を、
 # anim_frame（0=ダメージ発生直後）の経過に応じて表示に反映する（DAMAGE_FLASH_FRAMES, DAMAGE_TRANSITION_FRAMES参照）
@@ -345,12 +349,15 @@ DAMAGE_ANIM_DONE_FRAME = DAMAGE_FLASH_FRAMES + DAMAGE_TRANSITION_FRAMES
 heroine_damage_anim_old_hp = HEROINE_MAX_HP
 heroine_damage_anim_new_hp = HEROINE_MAX_HP
 heroine_damage_anim_frame  = DAMAGE_ANIM_DONE_FRAME
+heroine_damage_anim_flash_color = DAMAGE_FLASH_COLOR_ENEMY_ATTACK
 samurai_damage_anim_old_hp = SAMURAI_MAX_HP
 samurai_damage_anim_new_hp = SAMURAI_MAX_HP
 samurai_damage_anim_frame  = DAMAGE_ANIM_DONE_FRAME
+samurai_damage_anim_flash_color = DAMAGE_FLASH_COLOR_ENEMY_ATTACK
 enemy_damage_anim_old_hp = [GOBLIN_MAX_HP] * len(ENEMY_X_RATIOS)
 enemy_damage_anim_new_hp = [GOBLIN_MAX_HP] * len(ENEMY_X_RATIOS)
 enemy_damage_anim_frame  = [DAMAGE_ANIM_DONE_FRAME] * len(ENEMY_X_RATIOS)
+enemy_damage_anim_flash_color = [DAMAGE_FLASH_COLOR_WHIP] * len(ENEMY_X_RATIOS)
 
 # 敵の撃破状態：True の敵は殲滅済み（選択対象・通常表示の対象外となる）
 enemy_defeated = [False] * len(ENEMY_X_RATIOS)
@@ -1226,7 +1233,7 @@ def start_battle():
     global battle_enemy_attack_phase, battle_enemy_attack_frame, battle_attacking_enemy_index, battle_enemy_attack_target
     global enemy_defeated, enemy_hp, battle_annihilate_targets, battle_annihilate_frame
     global heroine_whip_trail_key, samurai_whip_trail_key
-    global enemy_damage_anim_old_hp, enemy_damage_anim_new_hp, enemy_damage_anim_frame
+    global enemy_damage_anim_old_hp, enemy_damage_anim_new_hp, enemy_damage_anim_frame, enemy_damage_anim_flash_color
 
     game_state = STATE_BATTLE
     battle_anim_frame = 0
@@ -1273,6 +1280,7 @@ def start_battle():
     enemy_damage_anim_old_hp = [GOBLIN_MAX_HP] * len(ENEMY_X_RATIOS)
     enemy_damage_anim_new_hp = [GOBLIN_MAX_HP] * len(ENEMY_X_RATIOS)
     enemy_damage_anim_frame  = [DAMAGE_ANIM_DONE_FRAME] * len(ENEMY_X_RATIOS)
+    enemy_damage_anim_flash_color = [DAMAGE_FLASH_COLOR_WHIP] * len(ENEMY_X_RATIOS)
     battle_annihilate_targets = []
     battle_annihilate_frame   = 0
     heroine_whip_trail.clear()
@@ -1575,8 +1583,8 @@ def update(dt):
     global enemy_defeated, enemy_hp, battle_annihilate_targets, battle_annihilate_frame
     global heroine_hp, samurai_hp
     global status_phase, status_anim_frame
-    global heroine_damage_anim_old_hp, heroine_damage_anim_new_hp, heroine_damage_anim_frame
-    global samurai_damage_anim_old_hp, samurai_damage_anim_new_hp, samurai_damage_anim_frame
+    global heroine_damage_anim_old_hp, heroine_damage_anim_new_hp, heroine_damage_anim_frame, heroine_damage_anim_flash_color
+    global samurai_damage_anim_old_hp, samurai_damage_anim_new_hp, samurai_damage_anim_frame, samurai_damage_anim_flash_color
 
     if game_state == STATE_STATUS:
         # ステータスウィンドウの開閉アニメ（バトルメインウィンドウと同じフレーム数で開閉する）
@@ -1702,6 +1710,7 @@ def update(dt):
                                 enemy_damage_anim_old_hp[target] = old_display_hp
                                 enemy_damage_anim_new_hp[target] = enemy_hp[target]
                                 enemy_damage_anim_frame[target]  = 0
+                                enemy_damage_anim_flash_color[target] = DAMAGE_FLASH_COLOR_SWORD
 
                                 if enemy_hp[target] <= 0:
                                     enemy_defeated[target] = True
@@ -1752,6 +1761,7 @@ def update(dt):
                                 enemy_damage_anim_old_hp[target] = old_display_hp
                                 enemy_damage_anim_new_hp[target] = enemy_hp[target]
                                 enemy_damage_anim_frame[target]  = 0
+                                enemy_damage_anim_flash_color[target] = DAMAGE_FLASH_COLOR_WHIP
 
                                 if enemy_hp[target] <= 0:
                                     # 撃破：殲滅演出（アルファ値を下げて消滅）を開始する
@@ -1805,6 +1815,7 @@ def update(dt):
                                     enemy_damage_anim_old_hp[i] = old_display_hp
                                     enemy_damage_anim_new_hp[i] = enemy_hp[i]
                                     enemy_damage_anim_frame[i]  = 0
+                                    enemy_damage_anim_flash_color[i] = DAMAGE_FLASH_COLOR_FLAME
                                     if enemy_hp[i] <= 0:
                                         enemy_defeated[i] = True
                                         newly_defeated.append(i)
@@ -1856,12 +1867,14 @@ def update(dt):
                                 samurai_damage_anim_old_hp = old_display_hp
                                 samurai_damage_anim_new_hp = samurai_hp
                                 samurai_damage_anim_frame  = 0
+                                samurai_damage_anim_flash_color = DAMAGE_FLASH_COLOR_ENEMY_ATTACK
                             else:
                                 old_display_hp = get_damage_display_hp(heroine_damage_anim_old_hp, heroine_damage_anim_new_hp, heroine_damage_anim_frame)
                                 heroine_hp = max(0, heroine_hp - damage)
                                 heroine_damage_anim_old_hp = old_display_hp
                                 heroine_damage_anim_new_hp = heroine_hp
                                 heroine_damage_anim_frame  = 0
+                                heroine_damage_anim_flash_color = DAMAGE_FLASH_COLOR_ENEMY_ATTACK
                             battle_enemy_attack_phase = BATTLE_WHIP_PHASE_RETURN
                             battle_enemy_attack_frame = 0
                     elif battle_enemy_attack_phase == BATTLE_WHIP_PHASE_RETURN:
@@ -2084,12 +2097,12 @@ def get_damage_display_hp(old_hp, new_hp, anim_frame):
     return old_hp + (new_hp - old_hp) * t
 
 # ---------------------------------------------------------
-# apply_damage_flash(img_raw, filename, char_height_m, old_hp, new_hp, max_hp, anim_frame)：
-# ダメージ表現アニメーションの①白色点滅フェーズ(anim_frame < DAMAGE_FLASH_FRAMES)の間、
+# apply_damage_flash(img_raw, filename, char_height_m, old_hp, new_hp, max_hp, anim_frame, flash_color)：
+# ダメージ表現アニメーションの①点滅フェーズ(anim_frame < DAMAGE_FLASH_FRAMES)の間、
 # 「更新前HP（old_hp）と更新後HP（new_hp）の間に相当する範囲」（＝この時点ではまだ通常表示のままの範囲）を
-# 既存の被弾点滅と同じ手法（BLEND_RGB_ADDで白を加算）で点滅させる
+# BLEND_RGB_ADDでflash_colorを加算して点滅させる（攻撃の種類ごとに色を変えられる。DAMAGE_FLASH_COLOR_*参照）
 # ---------------------------------------------------------
-def apply_damage_flash(img_raw, filename, char_height_m, old_hp, new_hp, max_hp, anim_frame):
+def apply_damage_flash(img_raw, filename, char_height_m, old_hp, new_hp, max_hp, anim_frame, flash_color):
     if anim_frame >= DAMAGE_FLASH_FRAMES or max_hp <= 0 or old_hp == new_hp:
         return img_raw
 
@@ -2115,7 +2128,7 @@ def apply_damage_flash(img_raw, filename, char_height_m, old_hp, new_hp, max_hp,
 
     result = img_raw.copy()
     flash_rect = pygame.Rect(0, flash_top, orig_w, flash_bottom - flash_top)
-    result.subsurface(flash_rect).fill(BATTLE_WHIP_FLASH_COLOR, special_flags=pygame.BLEND_RGB_ADD)
+    result.subsurface(flash_rect).fill(flash_color, special_flags=pygame.BLEND_RGB_ADD)
     return result
 
 # ---------------------------------------------------------
@@ -2241,39 +2254,6 @@ def render_battle():
         # 足元位置は登場時から変えない（ENEMY_GROUND_Y_FROM_BOTTOM_RATIO基準で固定）
         enemy_bottom_y = SCREEN_H - int(SCREEN_H * ENEMY_GROUND_Y_FROM_BOTTOM_RATIO)
 
-        # ★ ムチ被弾時の白色点滅（ダメージ表現）：対象の敵にBLEND_RGB_ADDで白を加算し、点滅させる
-        # BLEND_RGB_ADDはアルファ値を変えずRGBのみ加算するため、シルエットや透過部分を保ったまま白っぽく光らせられる
-        whip_flash_active = (battle_phase == BATTLE_PHASE_EXCHANGE
-                             and battle_menu_selected_index == BATTLE_MENU_INDEX_WHIP
-                             and battle_attacking_enemy_index == -1
-                             and battle_turn_order[battle_turn_index] == -1
-                             and battle_whip_phase == BATTLE_WHIP_PHASE_FLASH)
-        flash_blink_on = False
-        if whip_flash_active:
-            blink_half = max(1, BATTLE_WHIP_FLASH_BLINK_PERIOD_FRAMES // 2)
-            flash_blink_on = (battle_whip_frame // blink_half) % 2 == 0
-
-        # ★ サムライの剣の白色点滅：ムチと同じ点滅周期パラメータを流用し、攻撃対象の敵を白く光らせる
-        sword_flash_active = (battle_phase == BATTLE_PHASE_EXCHANGE
-                              and battle_attacking_enemy_index == -1
-                              and battle_turn_order[battle_turn_index] == -2
-                              and battle_samurai_whip_phase == BATTLE_WHIP_PHASE_FLASH)
-        sword_blink_on = False
-        if sword_flash_active:
-            sword_blink_half = max(1, BATTLE_WHIP_FLASH_BLINK_PERIOD_FRAMES // 2)
-            sword_blink_on = (battle_samurai_whip_frame // sword_blink_half) % 2 == 0
-
-        # ★ 炎（全体攻撃）の赤色点滅：ムチと同じ点滅周期パラメータを流用し、生存中の敵全体を同時に赤く光らせる
-        flame_flash_active = (battle_phase == BATTLE_PHASE_EXCHANGE
-                              and battle_menu_selected_index == BATTLE_MENU_INDEX_FLAME
-                              and battle_attacking_enemy_index == -1
-                              and battle_turn_order[battle_turn_index] == -1
-                              and battle_flame_phase == BATTLE_FLAME_PHASE_FLASH)
-        flame_flash_blink_on = False
-        if flame_flash_active:
-            flame_blink_half = max(1, BATTLE_WHIP_FLASH_BLINK_PERIOD_FRAMES // 2)
-            flame_flash_blink_on = (battle_flame_frame // flame_blink_half) % 2 == 0
-
         # ★ 敵の攻撃演出（ヒロインに接近 → 最接近で停止 → 元の位置へ後退）の進行度
         enemy_attack_active = (battle_phase == BATTLE_PHASE_EXCHANGE
                                and battle_menu_selected_index in (BATTLE_MENU_INDEX_WHIP, BATTLE_MENU_INDEX_FLAME, BATTLE_MENU_INDEX_DANCE)
@@ -2335,7 +2315,7 @@ def render_battle():
             # ★ ダメージ表現アニメーション：表示HPは実HPに即時追従せず、old_hp→new_hpへ数フレームかけて変化させる
             enemy_display_hp = get_damage_display_hp(enemy_damage_anim_old_hp[i], enemy_damage_anim_new_hp[i], enemy_damage_anim_frame[i])
             enemy_display_img_raw = apply_hp_grayscale(enemy_img_raw, "goblin_idle.png", ENEMY_GOBLIN_HEIGHT_M, int(round(enemy_display_hp)), GOBLIN_MAX_HP)
-            enemy_display_img_raw = apply_damage_flash(enemy_display_img_raw, "goblin_idle.png", ENEMY_GOBLIN_HEIGHT_M, enemy_damage_anim_old_hp[i], enemy_damage_anim_new_hp[i], GOBLIN_MAX_HP, enemy_damage_anim_frame[i])
+            enemy_display_img_raw = apply_damage_flash(enemy_display_img_raw, "goblin_idle.png", ENEMY_GOBLIN_HEIGHT_M, enemy_damage_anim_old_hp[i], enemy_damage_anim_new_hp[i], GOBLIN_MAX_HP, enemy_damage_anim_frame[i], enemy_damage_anim_flash_color[i])
             enemy_img, enemy_pos, enemy_rect = smoothscale_visible(enemy_display_img_raw, final_img_w, final_img_h, (enemy_x, enemy_img_bottom_y), clip_rect)
 
             if enemy_img is not None:
@@ -2345,14 +2325,6 @@ def render_battle():
                     tint = pygame.Surface(enemy_img.get_size(), pygame.SRCALPHA)
                     tint.fill((gray, gray, gray, 255))
                     enemy_img.blit(tint, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
-
-                # 攻撃対象の敵をダメージ演出として点滅させる（ムチ・剣＝対象の敵のみを白色点滅／炎＝生存中の敵全体を赤色点滅）
-                whip_flashing  = whip_flash_active and flash_blink_on and i == battle_target_enemy_index
-                sword_flashing = sword_flash_active and sword_blink_on and i == battle_samurai_target_enemy_index
-                flame_flashing = flame_flash_active and flame_flash_blink_on and not enemy_defeated[i]
-                if whip_flashing or sword_flashing or flame_flashing:
-                    flash_color = BATTLE_FLAME_FLASH_COLOR if flame_flashing else BATTLE_WHIP_FLASH_COLOR
-                    enemy_img.fill(flash_color, special_flags=pygame.BLEND_RGB_ADD)
 
                 # ★ 撃破演出：殲滅対象の敵は数フレームかけてアルファ値を下げ、完全に消滅させる（消滅後は描画しない）
                 if i in battle_annihilate_targets:
@@ -2473,19 +2445,8 @@ def render_battle():
         # ★ ダメージ表現アニメーション：表示HPは実HPに即時追従せず、old_hp→new_hpへ数フレームかけて変化させる
         heroine_display_hp = get_damage_display_hp(heroine_damage_anim_old_hp, heroine_damage_anim_new_hp, heroine_damage_anim_frame)
         heroine_display_img_raw = apply_hp_grayscale(battle_back_img_raw, "bunny_back.png", HEROINE_HEIGHT_M, int(round(heroine_display_hp)), HEROINE_MAX_HP)
-        heroine_display_img_raw = apply_damage_flash(heroine_display_img_raw, "bunny_back.png", HEROINE_HEIGHT_M, heroine_damage_anim_old_hp, heroine_damage_anim_new_hp, HEROINE_MAX_HP, heroine_damage_anim_frame)
+        heroine_display_img_raw = apply_damage_flash(heroine_display_img_raw, "bunny_back.png", HEROINE_HEIGHT_M, heroine_damage_anim_old_hp, heroine_damage_anim_new_hp, HEROINE_MAX_HP, heroine_damage_anim_frame, heroine_damage_anim_flash_color)
         img, img_pos, img_rect = smoothscale_visible(heroine_display_img_raw, final_img_w, final_img_h, (heroine_x, bottom_y), clip_rect)
-
-        # ★ 敵の攻撃を受けた際の白色点滅（ダメージ表現。ムチ被弾時の敵の点滅と同じ手法）
-        heroine_flash_active = (battle_phase == BATTLE_PHASE_EXCHANGE
-                                and battle_menu_selected_index in (BATTLE_MENU_INDEX_WHIP, BATTLE_MENU_INDEX_FLAME, BATTLE_MENU_INDEX_DANCE)
-                                and battle_attacking_enemy_index >= 0
-                                and battle_enemy_attack_phase == BATTLE_WHIP_PHASE_FLASH
-                                and battle_enemy_attack_target == -1)
-        if heroine_flash_active and img is not None:
-            blink_half = max(1, BATTLE_WHIP_FLASH_BLINK_PERIOD_FRAMES // 2)
-            if (battle_enemy_attack_frame // blink_half) % 2 == 0:
-                img.fill(BATTLE_WHIP_FLASH_COLOR, special_flags=pygame.BLEND_RGB_ADD)
 
         # ★ 残像（接近・後退中のみ）：BATTLE_WHIP_TRAIL_OFFSET_1/2 フレーム前の位置に半透明のヒロイン画像を重ねて表示する
         # （現在位置とほとんど同じ場合は表示しない。描画順は接近時＝現在→A→B、後退時＝B→A→現在）
@@ -2592,18 +2553,8 @@ def render_battle():
             # ★ ダメージ表現アニメーション：表示HPは実HPに即時追従せず、old_hp→new_hpへ数フレームかけて変化させる
             samurai_display_hp = get_damage_display_hp(samurai_damage_anim_old_hp, samurai_damage_anim_new_hp, samurai_damage_anim_frame)
             samurai_display_img_raw = apply_hp_grayscale(samurai_back_img_raw, "shota_back.png", SAMURAI_HEIGHT_M, int(round(samurai_display_hp)), SAMURAI_MAX_HP)
-            samurai_display_img_raw = apply_damage_flash(samurai_display_img_raw, "shota_back.png", SAMURAI_HEIGHT_M, samurai_damage_anim_old_hp, samurai_damage_anim_new_hp, SAMURAI_MAX_HP, samurai_damage_anim_frame)
+            samurai_display_img_raw = apply_damage_flash(samurai_display_img_raw, "shota_back.png", SAMURAI_HEIGHT_M, samurai_damage_anim_old_hp, samurai_damage_anim_new_hp, SAMURAI_MAX_HP, samurai_damage_anim_frame, samurai_damage_anim_flash_color)
             sam_img, sam_img_pos, sam_img_rect = smoothscale_visible(samurai_display_img_raw, sam_final_w, sam_final_h, (sam_x, sam_bottom_y), clip_rect)
-
-            # ★ 敵の攻撃を受けた際の白色点滅（攻撃対象がサムライの場合のみ。ヒロインの被弾点滅と同じ手法）
-            samurai_flash_active = (battle_phase == BATTLE_PHASE_EXCHANGE
-                                    and battle_attacking_enemy_index >= 0
-                                    and battle_enemy_attack_phase == BATTLE_WHIP_PHASE_FLASH
-                                    and battle_enemy_attack_target == -2)
-            if samurai_flash_active and sam_img is not None:
-                blink_half = max(1, BATTLE_WHIP_FLASH_BLINK_PERIOD_FRAMES // 2)
-                if (battle_enemy_attack_frame // blink_half) % 2 == 0:
-                    sam_img.fill(BATTLE_WHIP_FLASH_COLOR, special_flags=pygame.BLEND_RGB_ADD)
 
             # ★ マカダンス中：男性の仲間（サムライ）全体へのバフ演出として、サムライはヒロインのように消さず、
             # ピンク色（ダンス中のウィンドウ色と同じ色）に点滅させる
