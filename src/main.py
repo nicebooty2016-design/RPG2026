@@ -143,9 +143,13 @@ AI_FIELD_BATTLE_START_FRAMES = 90  # フィールドモード：経過後にEキ
 BATTLE_HEROINE_IDLE_PERIOD_FRAMES = 30  # 拡縮1周期のフレーム数
 BATTLE_HEROINE_IDLE_SCALE_DELTA   = 0.02  # 縦横スケールの振れ幅（1.0 ± DELTA）
 
-# 敵キャラクター演出パラメータ
-ENEMY_GOBLIN_FIRST_SCALE = 3.0  # 登場時の画像高さ（画面高さの何倍）
-ENEMY_GOBLIN_LAST_SCALE  = 0.3  # ヒロインのズームアウト完了時点での画像高さ（画面高さの何倍）
+# 敵キャラクター演出パラメータ：登場時／ズームアウト後それぞれについて、
+# 敵位置にて、バトルウィンドウ幅（=SCREEN_W）がワールド座標系で何mに相当するかを指定する
+# （この値が小さいほど、敵の身長(ENEMY_GOBLIN_HEIGHT_M)に対して画像が大きく＝ズームインして表示される）
+ENEMY_GOBLIN_FIRST_WINDOW_WIDTH_M = 8 / 15  # 登場時（ズームイン状態）
+ENEMY_GOBLIN_LAST_WINDOW_WIDTH_M  = 16 / 3  # ヒロインのズームアウト完了時点
+ENEMY_GOBLIN_FIRST_METER_TO_PIXEL = SCREEN_W / ENEMY_GOBLIN_FIRST_WINDOW_WIDTH_M
+ENEMY_GOBLIN_LAST_METER_TO_PIXEL  = SCREEN_W / ENEMY_GOBLIN_LAST_WINDOW_WIDTH_M
 ENEMY_GROUND_Y_FROM_BOTTOM_RATIO = 0.3  # 敵の足元（接地位置）：画面下端から画面高さの何倍の位置か
 ENEMY_X_RATIOS = [0.25, 0.5, 0.75]  # 敵を並べる横位置（画面左端から画面幅の何倍か）を1体ずつ指定
 ENEMY_SILHOUETTE_RELEASE_FRAMES = 15  # 黒シルエットが解除され通常表示になるまでのフレーム数（ズームアウト完了直後から進行）
@@ -324,7 +328,11 @@ ai_result_wait_frame = 0
 # AIユーザモード：フィールドモードで経過したフレーム数（一定時間経過でEキー相当の入力を行いバトルを開始する）
 ai_field_wait_frame = 0
 
-# HP：ヒロイン・サムライの現在HPは戦闘をまたいで引き継ぐ（回復しない）。敵の現在HPはエンカウント毎に最大HPへリセットされる
+# AIユーザモード：ヒロインの行動選択 → そのバトルで最初の番は必ずマカダンスを選択し、サムライにバフをかける。
+# 以後はそのバトルが終了するまで、マカダンス以外の行動からランダムに選択する
+heroine_macadance_used = False
+
+# HP：ヒロイン・サムライの現在HPは戦闘終了時に全回復する。敵の現在HPはエンカウント毎に最大HPへリセットされる
 heroine_hp = HEROINE_MAX_HP
 samurai_hp = SAMURAI_MAX_HP
 enemy_hp   = [GOBLIN_MAX_HP] * len(ENEMY_X_RATIOS)
@@ -394,6 +402,10 @@ BATTLE_DANCE_PHASE_SINK  = 0  # ヒロインが画面下に消えるまで
 BATTLE_DANCE_PHASE_DANCE = 1  # バトルウィンドウがピンクに染まり、ダンス画像を再生中
 battle_dance_phase = BATTLE_DANCE_PHASE_SINK
 battle_dance_frame = 0
+
+# マカダンス（味方バフ）演出：ピンクの点滅演出が終わった直後から、サムライの画像表示を強化版（shota2_*）に切り替える。
+# そのバトルが終了するまで（リザルト画面を含み、フィールドへ戻るまで）継続する
+samurai_powered_up = False
 
 # 攻防ステート内の行動順：サムライの行動決定後に、生存している敵全体・ヒロイン・サムライを含めてランダムに決定する
 # （-1 = ヒロイン、-2 = サムライ、0以上 = 敵のインデックス。一巡したらコマンド選択ステートへ戻る）
@@ -526,6 +538,9 @@ SAMURAI_WIN_IMG_PATH = os.path.join(BASE_DIR, "..", "assets", "images", "charact
 DANCE_DIR = os.path.join(BASE_DIR, "..", "assets", "images", "characters", "bunny", "bunny_dance_0")
 SAMURAI_FRONT_IMG_PATH = os.path.join(BASE_DIR, "..", "assets", "images", "characters", "shota", "shota_front.png")
 SAMURAI_BACK_IMG_PATH  = os.path.join(BASE_DIR, "..", "assets", "images", "characters", "shota", "shota_back.png")
+# マカダンス後の強化版サムライ画像（ピンクの点滅演出が終わった後、バトル終了まで表示を切り替える）
+SAMURAI2_FRONT_IMG_PATH = os.path.join(BASE_DIR, "..", "assets", "images", "characters", "shota", "shota2_front.png")
+SAMURAI2_BACK_IMG_PATH  = os.path.join(BASE_DIR, "..", "assets", "images", "characters", "shota", "shota2_back.png")
 ENEMY_GOBLIN_IMG_PATH = os.path.join(BASE_DIR, "..", "assets", "images", "enemies", "goblin", "goblin_idle.png")
 VOICES_DIR = os.path.join(BASE_DIR, "..", "assets", "sound", "voices")
 VOICE_GOBLIN_DAMAGED_PATH = os.path.join(BASE_DIR, "..", "assets", "sound", "voices", "goblin_damaged.wav")
@@ -599,6 +614,8 @@ enemy_img_raw       = None  # 敵（goblin）画像（オリジナル）
 heroine_front_img_raw = None  # ヒロイン前姿画像（オリジナル） — ステータスウィンドウ用
 samurai_front_img_raw = None  # サムライ前姿画像（オリジナル） — ステータスウィンドウ用
 samurai_back_img_raw  = None  # サムライ後ろ姿画像（オリジナル） — ステータスウィンドウ用
+samurai2_front_img_raw = None  # マカダンス後の強化版サムライ前姿画像（オリジナル）
+samurai2_back_img_raw  = None  # マカダンス後の強化版サムライ後ろ姿画像（オリジナル）
 character_art_top_height_m = {}  # 各立ち姿画像で実際の絵が始まる高さ（{ファイル名: 画像下端からの高さ（メートル）}）。is_debug時の緑線表示・HPグレースケール表示に使用
 hp_grayscale_cache = {}  # HPに応じたグレースケール合成画像のキャッシュ（{(ファイル名, 現在HP, 最大HP): Surface}）
 hp_grayscale_full_cache = {}  # 画像全体をグレースケール化＋暗くした画像のキャッシュ（{ファイル名: Surface}）。HPに依存しない部分を一度だけ計算する
@@ -1016,6 +1033,7 @@ def initialize():
     global tile_map, walk_images, walk_image_filenames, last_image, battle_back_img, battle_back_img_raw
     global result_win_img, result_win_img_raw, result_samurai_win_img, enemy_img_raw, dance_images_raw, voice_win_by_number, voice_samurai_win_by_number
     global heroine_front_img_raw, samurai_front_img_raw, samurai_back_img_raw, character_art_top_height_m
+    global samurai2_front_img_raw, samurai2_back_img_raw
     global voice_battle_start_list, voice_samurai_battle_start_list, voice_samurai_attack_list, voice_attack_by_number, voice_goblin_damaged, voice_dance
     global player_world_x, player_world_y
 
@@ -1063,6 +1081,9 @@ def initialize():
     heroine_front_img_raw = pygame.image.load(HEROINE_FRONT_IMG_PATH).convert_alpha()
     samurai_front_img_raw = pygame.image.load(SAMURAI_FRONT_IMG_PATH).convert_alpha()
     samurai_back_img_raw  = pygame.image.load(SAMURAI_BACK_IMG_PATH).convert_alpha()
+    # ★ マカダンス後の強化版サムライ画像を読み込み（ピンクの点滅演出が終わった後、バトル終了まで表示を切り替える）
+    samurai2_front_img_raw = pygame.image.load(SAMURAI2_FRONT_IMG_PATH).convert_alpha()
+    samurai2_back_img_raw  = pygame.image.load(SAMURAI2_BACK_IMG_PATH).convert_alpha()
 
     # ★ [デバッグ] 立ち姿画像ごとに「実際のキャラ絵が始まる高さ」をワールド座標系（メートル）で算出して記録する
     character_art_top_height_m["goblin_idle.png"] = scan_art_top_height_m(enemy_img_raw, ENEMY_GOBLIN_HEIGHT_M)
@@ -1070,6 +1091,8 @@ def initialize():
     character_art_top_height_m["bunny_back.png"]  = scan_art_top_height_m(battle_back_img_raw, HEROINE_HEIGHT_M)
     character_art_top_height_m["shota_front.png"] = scan_art_top_height_m(samurai_front_img_raw, SAMURAI_HEIGHT_M)
     character_art_top_height_m["shota_back.png"]  = scan_art_top_height_m(samurai_back_img_raw, SAMURAI_HEIGHT_M)
+    character_art_top_height_m["shota2_front.png"] = scan_art_top_height_m(samurai2_front_img_raw, SAMURAI_HEIGHT_M)
+    character_art_top_height_m["shota2_back.png"]  = scan_art_top_height_m(samurai2_back_img_raw, SAMURAI_HEIGHT_M)
 
     # ★ マカダンス演出用画像を読み込み（描画時にスケールするためオリジナルのまま保持）
     dance_images_raw = load_dance_images()
@@ -1104,8 +1127,22 @@ def enter_result_state(heroine_override=None, samurai_finish=False, samurai_over
     global result_flashout_heroine_override, result_flashout_samurai_override, result_flashout_is_samurai
     global result_win_voice, result_active_win_img
     global result_victory_message, result_message_complete_frame, result_win_bgm_start_frame
+    global heroine_hp, samurai_hp
+    global heroine_damage_anim_old_hp, heroine_damage_anim_new_hp, heroine_damage_anim_frame
+    global samurai_damage_anim_old_hp, samurai_damage_anim_new_hp, samurai_damage_anim_frame
 
     game_state = STATE_RESULT
+
+    # ★ 戦闘終了時にヒロイン・サムライのHPを全回復する（ダメージ表現アニメーションの状態も合わせてリセットする）
+    heroine_hp = HEROINE_MAX_HP
+    heroine_damage_anim_old_hp = HEROINE_MAX_HP
+    heroine_damage_anim_new_hp = HEROINE_MAX_HP
+    heroine_damage_anim_frame  = DAMAGE_ANIM_DONE_FRAME
+    samurai_hp = SAMURAI_MAX_HP
+    samurai_damage_anim_old_hp = SAMURAI_MAX_HP
+    samurai_damage_anim_new_hp = SAMURAI_MAX_HP
+    samurai_damage_anim_frame  = DAMAGE_ANIM_DONE_FRAME
+
     battle_flashout_frame    = 0
     result_white_delay_frame = 0
     result_slidein_frame     = 0
@@ -1209,8 +1246,9 @@ def battle_command_confirm():
 
 def result_to_field():
     # リザルト画面を閉じてフィールドへ戻る（Enterキー相当）
-    global game_state
+    global game_state, samurai_powered_up
     game_state = STATE_FIELD
+    samurai_powered_up = False  # ★ マカダンスによるサムライの見た目強化は、バトル終了（フィールドへ戻る）までで終了する
     pygame.mixer.music.fadeout(BGM_FIELD_RETURN_FADEOUT_MS)
 
 
@@ -1234,6 +1272,8 @@ def start_battle():
     global enemy_defeated, enemy_hp, battle_annihilate_targets, battle_annihilate_frame
     global heroine_whip_trail_key, samurai_whip_trail_key
     global enemy_damage_anim_old_hp, enemy_damage_anim_new_hp, enemy_damage_anim_frame, enemy_damage_anim_flash_color
+    global samurai_powered_up
+    global heroine_macadance_used
 
     game_state = STATE_BATTLE
     battle_anim_frame = 0
@@ -1268,6 +1308,8 @@ def start_battle():
     battle_flame_frame = 0
     battle_dance_phase = BATTLE_DANCE_PHASE_SINK
     battle_dance_frame = 0
+    samurai_powered_up = False  # ★ マカダンスによるサムライの見た目強化は、バトルごとにリセットする
+    heroine_macadance_used = False  # ★ ヒロインの最初の番に必ずマカダンスを選択させるため、バトルごとにリセットする
     battle_turn_order = []
     battle_turn_index = 0
     battle_enemy_attack_phase = BATTLE_WHIP_PHASE_APPROACH
@@ -1313,6 +1355,7 @@ def process_ai_battle_input():
     global ai_enemy_target_index, ai_enemy_step_dir
     global ai_result_wait_frame
     global ai_field_wait_frame
+    global heroine_macadance_used
 
     if game_state == STATE_FIELD:
         # フィールドモード開始から指定フレーム経過した瞬間にEキー相当の入力を行いバトルを開始する
@@ -1354,7 +1397,16 @@ def process_ai_battle_input():
 
     if ai_command_step == AI_COMMAND_STEP_DECIDE:
         # 行動をランダムに決定し、メニューカーソルを近い方向から目標位置へ合わせ始める
-        ai_menu_target_index = random.randrange(len(menu_options))
+        # ★ ヒロインはそのバトルの最初の番に必ずマカダンスを選択してサムライにバフをかけ、
+        # 以後はそのバトルが終了するまでマカダンス以外の行動からランダムに選択する
+        if battle_phase == BATTLE_PHASE_COMMAND_HEROINE and not heroine_macadance_used:
+            ai_menu_target_index = BATTLE_MENU_INDEX_DANCE
+            heroine_macadance_used = True
+        elif battle_phase == BATTLE_PHASE_COMMAND_HEROINE:
+            non_dance_indices = [i for i in range(len(menu_options)) if i != BATTLE_MENU_INDEX_DANCE]
+            ai_menu_target_index = random.choice(non_dance_indices)
+        else:
+            ai_menu_target_index = random.randrange(len(menu_options))
         ai_menu_step_dir = ai_cyclic_step_direction(current_menu_index, ai_menu_target_index, len(menu_options))
         ai_command_step = AI_COMMAND_STEP_MENU_CURSOR
         ai_command_wait_frame = 0
@@ -1577,6 +1629,7 @@ def update(dt):
     global battle_samurai_whip_phase, battle_samurai_whip_frame
     global battle_flame_phase, battle_flame_frame
     global battle_dance_phase, battle_dance_frame
+    global samurai_powered_up
     global battle_enemy_attack_phase, battle_enemy_attack_frame, battle_enemy_attack_target
     global battle_target_cursor_frame
     global battle_target_enemy_index, battle_samurai_target_enemy_index
@@ -1841,6 +1894,8 @@ def update(dt):
                             battle_dance_frame += 1
                             if battle_dance_frame >= BATTLE_DANCE_SCROLL_FRAMES:
                                 pygame.mixer.music.stop()
+                                # ★ サムライのピンク点滅演出が終わったので、以後バトル終了まで見た目を強化版（shota2_*）に切り替える
+                                samurai_powered_up = True
                                 advance_battle_turn()
                 else:
                     # 敵の番：battle_attacking_enemy_index の敵がヒロインに接近して攻撃する（流れはムチと同じ4ステート）
@@ -2241,8 +2296,8 @@ def render_battle():
                        if BATTLE_HEROINE_ZOOMOUT_FRAMES > 0 else 1.0
         enemy_t_eased = 1.0 - (1.0 - enemy_t_zoom) ** 2
 
-        enemy_start_img_h = int(SCREEN_H * ENEMY_GOBLIN_FIRST_SCALE)
-        enemy_end_img_h   = int(SCREEN_H * ENEMY_GOBLIN_LAST_SCALE)
+        enemy_start_img_h = int(ENEMY_GOBLIN_HEIGHT_M * ENEMY_GOBLIN_FIRST_METER_TO_PIXEL)
+        enemy_end_img_h   = int(ENEMY_GOBLIN_HEIGHT_M * ENEMY_GOBLIN_LAST_METER_TO_PIXEL)
         enemy_img_h = max(1, int(enemy_start_img_h + (enemy_end_img_h - enemy_start_img_h) * enemy_t_eased))
 
         enemy_img_w = max(1, int(enemy_orig_w * enemy_img_h / enemy_orig_h))
@@ -2511,8 +2566,11 @@ def render_battle():
             heroine_whip_trail_key = None
 
         # ★ サムライ（仲間キャラ）の後ろ姿：ヒロインの1m右を基準位置とし、剣（近接攻撃）の番には敵に接近・後退する
-        if samurai_back_img_raw:
-            sam_orig_w, sam_orig_h = samurai_back_img_raw.get_size()
+        # ★ マカダンスのピンク点滅演出が終わった後は、見た目を強化版（shota2_back.png）に切り替える
+        sam_back_img_raw = samurai2_back_img_raw if samurai_powered_up else samurai_back_img_raw
+        sam_back_art_key = "shota2_back.png" if samurai_powered_up else "shota_back.png"
+        if sam_back_img_raw:
+            sam_orig_w, sam_orig_h = sam_back_img_raw.get_size()
 
             # ★ 剣（近接攻撃）：敵に接近 → 最接近で停止 → 元の位置へ後退（流れはヒロインのムチと同じ）
             sword_active = (battle_phase == BATTLE_PHASE_EXCHANGE and battle_attacking_enemy_index == -1
@@ -2552,8 +2610,8 @@ def render_battle():
             # ★ 現在HPに応じて、画像下部（絵の範囲のうち減った体力分）をグレースケール化する
             # ★ ダメージ表現アニメーション：表示HPは実HPに即時追従せず、old_hp→new_hpへ数フレームかけて変化させる
             samurai_display_hp = get_damage_display_hp(samurai_damage_anim_old_hp, samurai_damage_anim_new_hp, samurai_damage_anim_frame)
-            samurai_display_img_raw = apply_hp_grayscale(samurai_back_img_raw, "shota_back.png", SAMURAI_HEIGHT_M, int(round(samurai_display_hp)), SAMURAI_MAX_HP)
-            samurai_display_img_raw = apply_damage_flash(samurai_display_img_raw, "shota_back.png", SAMURAI_HEIGHT_M, samurai_damage_anim_old_hp, samurai_damage_anim_new_hp, SAMURAI_MAX_HP, samurai_damage_anim_frame, samurai_damage_anim_flash_color)
+            samurai_display_img_raw = apply_hp_grayscale(sam_back_img_raw, sam_back_art_key, SAMURAI_HEIGHT_M, int(round(samurai_display_hp)), SAMURAI_MAX_HP)
+            samurai_display_img_raw = apply_damage_flash(samurai_display_img_raw, sam_back_art_key, SAMURAI_HEIGHT_M, samurai_damage_anim_old_hp, samurai_damage_anim_new_hp, SAMURAI_MAX_HP, samurai_damage_anim_frame, samurai_damage_anim_flash_color)
             sam_img, sam_img_pos, sam_img_rect = smoothscale_visible(samurai_display_img_raw, sam_final_w, sam_final_h, (sam_x, sam_bottom_y), clip_rect)
 
             # ★ マカダンス中：男性の仲間（サムライ）全体へのバフ演出として、サムライはヒロインのように消さず、
@@ -2589,9 +2647,9 @@ def render_battle():
                 if sword_active and battle_samurai_whip_phase == BATTLE_WHIP_PHASE_RETURN:
                     # 戻るとき：B → A → 現在画像 の順で重ねる
                     if sam_trail_b is not None:
-                        blit_heroine_trail_image(samurai_back_img_raw, sam_trail_b, BATTLE_WHIP_TRAIL_ALPHA_2, clip_rect)
+                        blit_heroine_trail_image(sam_back_img_raw, sam_trail_b, BATTLE_WHIP_TRAIL_ALPHA_2, clip_rect)
                     if sam_trail_a is not None:
-                        blit_heroine_trail_image(samurai_back_img_raw, sam_trail_a, BATTLE_WHIP_TRAIL_ALPHA_1, clip_rect)
+                        blit_heroine_trail_image(sam_back_img_raw, sam_trail_a, BATTLE_WHIP_TRAIL_ALPHA_1, clip_rect)
                     if sam_img is not None:
                         screen.blit(sam_img, sam_img_pos)
                 else:
@@ -2599,12 +2657,12 @@ def render_battle():
                     if sam_img is not None:
                         screen.blit(sam_img, sam_img_pos)
                     if sam_trail_a is not None:
-                        blit_heroine_trail_image(samurai_back_img_raw, sam_trail_a, BATTLE_WHIP_TRAIL_ALPHA_1, clip_rect)
+                        blit_heroine_trail_image(sam_back_img_raw, sam_trail_a, BATTLE_WHIP_TRAIL_ALPHA_1, clip_rect)
                     if sam_trail_b is not None:
-                        blit_heroine_trail_image(samurai_back_img_raw, sam_trail_b, BATTLE_WHIP_TRAIL_ALPHA_2, clip_rect)
+                        blit_heroine_trail_image(sam_back_img_raw, sam_trail_b, BATTLE_WHIP_TRAIL_ALPHA_2, clip_rect)
                 if is_debug:
                     pygame.draw.rect(screen, (255, 255, 255), sam_img_rect, 1)  # ★ [デバッグ] 元画像サイズの枠線
-                    draw_art_top_debug_line("shota_back.png", SAMURAI_HEIGHT_M, sam_bottom_y, sam_final_h, sam_img_rect.left, sam_img_rect.right)  # ★ [デバッグ] 実際の絵の上端
+                    draw_art_top_debug_line(sam_back_art_key, SAMURAI_HEIGHT_M, sam_bottom_y, sam_final_h, sam_img_rect.left, sam_img_rect.right)  # ★ [デバッグ] 実際の絵の上端
                 screen.set_clip(None)
 
                 # [デバッグ表示] サムライのHPを「現在HP/最大HP」の文字列で頭上に表示する
@@ -2702,7 +2760,7 @@ def render_result():
         #   戦闘終了直前の表示位置・スケールをそのまま引き継ぐ。
         #   通常位置にスナップして見える違和感を防ぐため。例：ムチ・剣で最後の敵を倒した直後はリザルトの最接近位置を維持する）
         if result_flashout_is_samurai:
-            flashout_img_raw = samurai_back_img_raw
+            flashout_img_raw = samurai2_back_img_raw if samurai_powered_up else samurai_back_img_raw
             flashout_override = result_flashout_samurai_override
             flashout_height_m = SAMURAI_HEIGHT_M
             flashout_default_x = SCREEN_W // 2 if battle_focus_samurai \
@@ -2847,7 +2905,10 @@ def render_status():
 
     # ★ 上下キーで前姿／後ろ姿を切り替え（デフォルトは後ろ姿）
     heroine_img_raw = heroine_front_img_raw if status_view == STATUS_VIEW_FRONT else battle_back_img_raw
-    samurai_img_raw = samurai_front_img_raw if status_view == STATUS_VIEW_FRONT else samurai_back_img_raw
+    if status_view == STATUS_VIEW_FRONT:
+        samurai_img_raw = samurai2_front_img_raw if samurai_powered_up else samurai_front_img_raw
+    else:
+        samurai_img_raw = samurai2_back_img_raw if samurai_powered_up else samurai_back_img_raw
 
     if heroine_img_raw:
         img_h = int(HEROINE_HEIGHT_M * STATUS_METER_TO_PIXEL)
@@ -2870,7 +2931,10 @@ def render_status():
         screen.blit(img, img_rect)
         if is_debug:
             pygame.draw.rect(screen, (255, 255, 255), img_rect, 1)  # ★ [デバッグ] 元画像サイズの枠線
-            samurai_art_key = "shota_front.png" if status_view == STATUS_VIEW_FRONT else "shota_back.png"
+            if status_view == STATUS_VIEW_FRONT:
+                samurai_art_key = "shota2_front.png" if samurai_powered_up else "shota_front.png"
+            else:
+                samurai_art_key = "shota2_back.png" if samurai_powered_up else "shota_back.png"
             draw_art_top_debug_line(samurai_art_key, SAMURAI_HEIGHT_M, band_bottom, img_h, img_rect.left, img_rect.right)  # ★ [デバッグ] 実際の絵の上端
 
     screen.set_clip(None)
