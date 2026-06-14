@@ -115,6 +115,7 @@ RESULT_SAMURAI_VICTORY_MESSAGES = {
 # 女戦士がトドメを刺した場合の勝利ボイス（warrior_win_<番号>.mp3）ごとに対応する勝利メッセージ本文
 RESULT_WARRIOR_VICTORY_MESSAGES = {
     0: '家に帰って、シコってろ！',
+    1: 'もうイっちゃったのかぁ？',
 }
 VOICE_WIN_SPEED = 1.5  # 勝利ボイスの再生速度倍率（候補とも一律。この倍率に合わせて勝利メッセージの表示速度も変化する）
 # 再生速度変更時のピッチ維持（OLA法による時間伸縮）パラメータ
