@@ -189,8 +189,9 @@ BATTLE_MENU_INDEX_FLAME = 1  # BATTLE_MENU_OPTIONS内の「炎」のインデッ
 BATTLE_MENU_INDEX_DANCE = 2  # BATTLE_MENU_OPTIONS内の「マカダンス」のインデックス
 
 # サムライの行動選択肢（ヒロインの選択後に表示）
-# ★ [一時的] 動作確認のため、心眼剣のみを選択肢にしている（元に戻す場合は ["刀", "心眼剣"] と SHINGANKEN=1 に戻す）
-SAMURAI_MENU_OPTIONS = ["心眼剣"]
+# マカダンスでバフがかかる前は「刀」のみ、バフがかかった後は「心眼剣」のみを選択可能とする
+SAMURAI_MENU_OPTIONS_NORMAL = ["刀"]
+SAMURAI_MENU_OPTIONS_POWERED_UP = ["心眼剣"]
 SAMURAI_MENU_INDEX_SWORD = 0
 SAMURAI_MENU_INDEX_SHINGANKEN = 0
 
@@ -521,7 +522,7 @@ PLAYER_COLLIDER_RADIUS = 0.25
 # ---------------------------------------------------------
 METER_TO_PIXEL = 64
 HEROINE_HEIGHT_M = 2.0  # ヒロインの身長（メートル）
-SAMURAI_HEIGHT_M = 1.5  # サムライの身長（メートル）
+SAMURAI_HEIGHT_M = 1.6  # サムライの身長（メートル）
 ENEMY_GOBLIN_HEIGHT_M = 1.2  # ゴブリンの身長（メートル）。立ち姿画像のデバッグ表示（実際の絵の上端の算出）に使用
 HP_GRAYSCALE_DARKNESS = 0.5  # HP低下によるグレースケール表示の暗さ（1=通常のグレースケール、0=真っ黒）
 
@@ -1009,8 +1010,10 @@ def start_battle_turn():
             play_attack_voice()
     elif attacker == -2:
         # サムライの番：選択した行動（刀／心眼剣）で攻撃する
+        # （SAMURAI_MENU_INDEX_SWORD/SHINGANKENはどちらも0のため、menu_selected_indexだけでは区別できない。
+        #   マカダンスのバフ後（samurai_powered_up）かどうかで判定する）
         battle_attacking_enemy_index = -1
-        if battle_samurai_menu_selected_index == SAMURAI_MENU_INDEX_SHINGANKEN:
+        if samurai_powered_up:
             battle_shingan_frame = 0
             battle_shingan_slash_frames = [BATTLE_SLASH_TOTAL_FRAMES] * SHINGANKEN_SLASH_COUNT
             battle_shingan_target_enemy_index = battle_samurai_target_enemy_index
@@ -1266,6 +1269,13 @@ def battle_first_command_phase():
 def battle_second_command_phase():
     return BATTLE_PHASE_COMMAND_HEROINE if battle_focus_samurai else BATTLE_PHASE_COMMAND_SAMURAI
 
+
+# ---------------------------------------------------------
+# サムライの行動選択肢を返す（マカダンスでバフがかかる前は「刀」のみ、バフ後は「心眼剣」のみ）
+# ---------------------------------------------------------
+def get_samurai_menu_options():
+    return SAMURAI_MENU_OPTIONS_POWERED_UP if samurai_powered_up else SAMURAI_MENU_OPTIONS_NORMAL
+
 # ---------------------------------------------------------
 # バトルのコマンド選択操作：人間のキー入力／AIユーザモードの双方から呼び出される共通処理
 # （戦闘シーケンスのコア＝update()側は、これらがどちらから呼ばれたかを意識しない）
@@ -1276,7 +1286,7 @@ def battle_menu_cursor_step(direction):
     if battle_phase == BATTLE_PHASE_COMMAND_HEROINE:
         battle_menu_selected_index = (battle_menu_selected_index + direction) % len(BATTLE_MENU_OPTIONS)
     elif battle_phase == BATTLE_PHASE_COMMAND_SAMURAI:
-        battle_samurai_menu_selected_index = (battle_samurai_menu_selected_index + direction) % len(SAMURAI_MENU_OPTIONS)
+        battle_samurai_menu_selected_index = (battle_samurai_menu_selected_index + direction) % len(get_samurai_menu_options())
 
 
 def battle_target_cursor_step(direction):
@@ -1478,7 +1488,7 @@ def process_ai_battle_input():
         target_selection_indices = (BATTLE_MENU_INDEX_WHIP,)
         current_target_index = battle_target_enemy_index
     else:
-        menu_options = SAMURAI_MENU_OPTIONS
+        menu_options = get_samurai_menu_options()
         current_menu_index = battle_samurai_menu_selected_index
         target_selection_indices = (SAMURAI_MENU_INDEX_SWORD, SAMURAI_MENU_INDEX_SHINGANKEN)
         current_target_index = battle_samurai_target_enemy_index
@@ -1835,7 +1845,9 @@ def update(dt):
                 if battle_attacking_enemy_index == -1:
                     attacker = battle_turn_order[battle_turn_index]
                     if attacker == -2:
-                        if battle_samurai_menu_selected_index == SAMURAI_MENU_INDEX_SHINGANKEN:
+                        # SAMURAI_MENU_INDEX_SWORD/SHINGANKENはどちらも0のため、menu_selected_indexだけでは区別できない。
+                        # マカダンスのバフ後（samurai_powered_up）かどうかで刀／心眼剣を判定する
+                        if samurai_powered_up:
                             # 心眼剣：接近せずその場にとどまり、SHINGANKEN_WAIT_FRAMES経過後から
                             # SHINGANKEN_SLASH_INTERVAL_FRAMESごとに次々と斬撃を発生させる（計SHINGANKEN_SLASH_COUNT回）。
                             # 各斬撃の軌跡は刀の斬撃と同じ長さ・中心で、方向のみ360度からランダムに選ぶ
@@ -2863,9 +2875,8 @@ def render_battle():
             heroine_whip_trail_key = None
 
         # ★ サムライ（仲間キャラ）の後ろ姿：ヒロインの1m右を基準位置とし、剣（近接攻撃）の番には敵に接近・後退する
-        # ★ マカダンスのピンク点滅演出が終わった後は、見た目を強化版（shota2_back.png）に切り替える
-        sam_back_img_raw = samurai2_back_img_raw if samurai_powered_up else samurai_back_img_raw
-        sam_back_art_key = "shota2_back.png" if samurai_powered_up else "shota_back.png"
+        sam_back_img_raw = samurai_back_img_raw
+        sam_back_art_key = "shota_back.png"
         if sam_back_img_raw:
             sam_orig_w, sam_orig_h = sam_back_img_raw.get_size()
 
@@ -3026,7 +3037,7 @@ def render_battle():
         if battle_phase == BATTLE_PHASE_COMMAND_HEROINE:
             render_battle_menu(BATTLE_MENU_OPTIONS, battle_menu_selected_index)
         elif battle_phase == BATTLE_PHASE_COMMAND_SAMURAI:
-            render_battle_menu(SAMURAI_MENU_OPTIONS, battle_samurai_menu_selected_index)
+            render_battle_menu(get_samurai_menu_options(), battle_samurai_menu_selected_index)
 
 # ---------------------------------------------------------
 # render_battle_menu()：攻撃選択サブウィンドウの描画
@@ -3085,7 +3096,7 @@ def render_result():
         #   戦闘終了直前の表示位置・スケールをそのまま引き継ぐ。
         #   通常位置にスナップして見える違和感を防ぐため。例：ムチ・剣で最後の敵を倒した直後はリザルトの最接近位置を維持する）
         if result_flashout_is_samurai:
-            flashout_img_raw = samurai2_back_img_raw if samurai_powered_up else samurai_back_img_raw
+            flashout_img_raw = samurai_back_img_raw
             flashout_override = result_flashout_samurai_override
             flashout_height_m = SAMURAI_HEIGHT_M
             flashout_default_x = SCREEN_W // 2 if battle_focus_samurai \
@@ -3231,9 +3242,9 @@ def render_status():
     # ★ 上下キーで前姿／後ろ姿を切り替え（デフォルトは後ろ姿）
     heroine_img_raw = heroine_front_img_raw if status_view == STATUS_VIEW_FRONT else battle_back_img_raw
     if status_view == STATUS_VIEW_FRONT:
-        samurai_img_raw = samurai2_front_img_raw if samurai_powered_up else samurai_front_img_raw
+        samurai_img_raw = samurai_front_img_raw
     else:
-        samurai_img_raw = samurai2_back_img_raw if samurai_powered_up else samurai_back_img_raw
+        samurai_img_raw = samurai_back_img_raw
 
     if heroine_img_raw:
         img_h = int(HEROINE_HEIGHT_M * STATUS_METER_TO_PIXEL)
@@ -3257,9 +3268,9 @@ def render_status():
         if is_debug:
             pygame.draw.rect(screen, (255, 255, 255), img_rect, 1)  # ★ [デバッグ] 元画像サイズの枠線
             if status_view == STATUS_VIEW_FRONT:
-                samurai_art_key = "shota2_front.png" if samurai_powered_up else "shota_front.png"
+                samurai_art_key = "shota_front.png"
             else:
-                samurai_art_key = "shota2_back.png" if samurai_powered_up else "shota_back.png"
+                samurai_art_key = "shota_back.png"
             draw_art_top_debug_line(samurai_art_key, SAMURAI_HEIGHT_M, band_bottom, img_h, img_rect.left, img_rect.right)  # ★ [デバッグ] 実際の絵の上端
 
     screen.set_clip(None)
