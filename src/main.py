@@ -128,6 +128,7 @@ RESULT_WIN_BGM_START_SEC   = 157.6  # 勝利BGM代用：再生開始時にbattle
 
 # 音量
 BGM_BATTLE_VOLUME = 0.30  # バトルBGM音量（0.0～1.0）
+BGM_BATTLE2_VOLUME = 0.10  # 戦闘曲（battle2.mp3）の音量（0.0～1.0）
 VOICE_WIN_VOLUME  = 1.0  # 勝利ボイス音量（0.0～1.0）
 VOICE_BATTLE_START_VOLUME = 1.0  # エンカウント時かけ声の音量（0.0～1.0）
 VOICE_BATTLE_START_SPEED = 1.3  # エンカウント時かけ声の再生速度倍率（候補とも一律）
@@ -642,6 +643,7 @@ VOICE_SAMURAI_DAMAGED_PATH = os.path.join(BASE_DIR, "..", "assets", "sound", "vo
 VOICE_WARRIOR_DAMAGED_PATH = os.path.join(BASE_DIR, "..", "assets", "sound", "voices", "warrior_damaged_0.mp3")
 VOICE_DANCE_PATH = os.path.join(BASE_DIR, "..", "assets", "sound", "voices", "bunny_dance_0.mp3")
 BGM_BATTLE_PATH = os.path.join(BASE_DIR, "..", "assets", "sound", "bgms", "battle.mp3")
+BGM_BATTLE2_PATH = os.path.join(BASE_DIR, "..", "assets", "sound", "bgms", "battle2.mp3")
 SES_DIR = os.path.join(BASE_DIR, "..", "assets", "sound", "ses")
 VOICE_KATANA_SLASH_PATH = os.path.join(SES_DIR, "katana_slash.mp3")
 VOICE_SHINGANKEN_0_PATH = os.path.join(VOICES_DIR, "shinganken_0.mp3")  # 心眼剣開始時のかけ声
@@ -738,6 +740,7 @@ voice_goblin_damaged = None  # 敵（ゴブリン）被弾やられボイス
 voice_heroine_damaged = None  # ヒロイン被弾やられボイス
 voice_samurai_damaged = None  # サムライ被弾やられボイス
 voice_warrior_damaged = None  # 女戦士被弾やられボイス
+sound_battle2_bgm = None  # 戦闘曲（battle2.mp3）。エンカウント後ズームアウト開始時に再生し、決着時に即停止する
 voice_dance = None  # マカダンス開始時のかけ声
 voice_katana_slash = None  # サムライの刀の斬撃エフェクト開始時SE
 voice_shinganken_0 = None  # 心眼剣開始時のかけ声
@@ -1237,6 +1240,7 @@ def initialize():
     global heroine_front_img_raw, samurai_front_img_raw, samurai_back_img_raw, character_art_top_height_m
     global warrior_front_img_raw, warrior_back_img_raw
     global voice_battle_start_list, voice_samurai_battle_start_list, voice_warrior_battle_start_list, voice_samurai_attack_list, voice_warrior_attack_list, voice_attack_by_number, voice_goblin_damaged, voice_heroine_damaged, voice_samurai_damaged, voice_warrior_damaged, voice_dance, voice_katana_slash
+    global sound_battle2_bgm
     global voice_shinganken_0, voice_shinganken_1
     global player_world_x, player_world_y
 
@@ -1344,6 +1348,9 @@ def initialize():
     voice_dance = load_sound_at_speed(VOICE_DANCE_PATH, VOICE_DANCE_SPEED)
     voice_dance.set_volume(VOICE_DANCE_VOLUME)
 
+    sound_battle2_bgm = pygame.mixer.Sound(BGM_BATTLE2_PATH)
+    sound_battle2_bgm.set_volume(BGM_BATTLE2_VOLUME)
+
     voice_katana_slash = pygame.mixer.Sound(VOICE_KATANA_SLASH_PATH)
     voice_katana_slash.set_volume(VOICE_KATANA_SLASH_VOLUME)
 
@@ -1385,6 +1392,9 @@ def enter_result_state(heroine_override=None, samurai_finish=False, samurai_over
     global warrior_damage_anim_old_hp, warrior_damage_anim_new_hp, warrior_damage_anim_frame
 
     game_state = STATE_RESULT
+
+    # ★ 決着の瞬間：戦闘曲（battle2.mp3）を即停止する
+    sound_battle2_bgm.stop()
 
     # ★ 戦闘終了時にヒロイン・サムライ・女戦士のHPを全回復する（ダメージ表現アニメーションの状態も合わせてリセットする）
     heroine_hp = HEROINE_MAX_HP
@@ -2046,7 +2056,9 @@ def update(dt):
             return
 
         # ③ ズームアウト：静止が完了した瞬間にかけ声をランダムに選んで再生（注視先に応じてヒロイン／サムライ／女戦士のかけ声を切り替える）
+        # 　　また、この瞬間から戦闘曲（battle2.mp3）を再生する
         if heroine_zoomout_frame == 0:
+            sound_battle2_bgm.play(loops=-1)
             if battle_focus_character == -3:
                 play_warrior_battle_start_voice()
             elif battle_focus_character == -2:
@@ -2340,6 +2352,13 @@ def update(dt):
                             battle_dance_frame += 1
                             if battle_dance_frame >= BATTLE_DANCE_SCROLL_FRAMES:
                                 pygame.mixer.music.stop()
+                                # ★ マカダンスBGM代用で上書きされたため、勝利BGM代用（battle.mp3の指定秒数）の
+                                # 先読みシークをやり直し、無音・一時停止の状態に戻しておく
+                                # （これをしないと、リザルトでのunpause()が「停止中」の音楽に対する操作になり鳴らない）
+                                pygame.mixer.music.load(BGM_BATTLE_PATH)
+                                pygame.mixer.music.set_volume(0.0)
+                                pygame.mixer.music.play(start=RESULT_WIN_BGM_START_SEC)
+                                pygame.mixer.music.pause()
                                 # ★ サムライのピンク点滅演出が終わったので、以後バトル終了まで「心眼剣」を使用可能にする
                                 samurai_powered_up = True
                                 advance_battle_turn()
