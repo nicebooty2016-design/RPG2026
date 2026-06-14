@@ -137,6 +137,9 @@ VOICE_ATTACK_VOLUME = 1.0  # 攻撃ボイス音量（0.0～1.0）
 VOICE_SAMURAI_ATTACK_VOLUME = 1.0  # サムライ攻撃時のかけ声音量（0.0～1.0）
 VOICE_WARRIOR_ATTACK_VOLUME = 1.0  # 女戦士攻撃時のかけ声音量（0.0～1.0）
 VOICE_GOBLIN_DAMAGED_VOLUME = 1.0  # 敵（ゴブリン）被弾やられボイスの音量（0.0～1.0）
+VOICE_HEROINE_DAMAGED_VOLUME = 1.0  # ヒロイン被弾やられボイスの音量（0.0～1.0）
+VOICE_SAMURAI_DAMAGED_VOLUME = 1.0  # サムライ被弾やられボイスの音量（0.0～1.0）
+VOICE_WARRIOR_DAMAGED_VOLUME = 1.0  # 女戦士被弾やられボイスの音量（0.0～1.0）
 VOICE_DANCE_VOLUME = 1.0  # マカダンスかけ声の音量（0.0～1.0）
 VOICE_KATANA_SLASH_VOLUME = 1.0  # サムライの刀の斬撃エフェクト開始時に再生するSEの音量（0.0～1.0）
 VOICE_SHINGANKEN_VOLUME = 1.0  # 心眼剣のかけ声（shinganken_0/1.mp3）の音量（0.0～1.0）
@@ -634,6 +637,9 @@ WARRIOR_BACK_IMG_PATH  = os.path.join(BASE_DIR, "..", "assets", "images", "chara
 ENEMY_GOBLIN_IMG_PATH = os.path.join(BASE_DIR, "..", "assets", "images", "enemies", "goblin", "goblin_idle.png")
 VOICES_DIR = os.path.join(BASE_DIR, "..", "assets", "sound", "voices")
 VOICE_GOBLIN_DAMAGED_PATH = os.path.join(BASE_DIR, "..", "assets", "sound", "voices", "goblin_damaged.mp3")
+VOICE_HEROINE_DAMAGED_PATH = os.path.join(BASE_DIR, "..", "assets", "sound", "voices", "bunny_damaged_0.mp3")
+VOICE_SAMURAI_DAMAGED_PATH = os.path.join(BASE_DIR, "..", "assets", "sound", "voices", "samurai_damaged_0.mp3")
+VOICE_WARRIOR_DAMAGED_PATH = os.path.join(BASE_DIR, "..", "assets", "sound", "voices", "warrior_damaged_0.mp3")
 VOICE_DANCE_PATH = os.path.join(BASE_DIR, "..", "assets", "sound", "voices", "bunny_dance_0.mp3")
 BGM_BATTLE_PATH = os.path.join(BASE_DIR, "..", "assets", "sound", "bgms", "battle.mp3")
 SES_DIR = os.path.join(BASE_DIR, "..", "assets", "sound", "ses")
@@ -729,6 +735,9 @@ voice_samurai_attack_list = []  # サムライ攻撃時のかけ声候補（samu
 voice_warrior_attack_list = []  # 女戦士攻撃時のかけ声候補（warrior_attack_<番号>.mp3 を全て読み込み、再生時にランダム選択する）
 voice_attack_by_number = {}  # 攻撃ボイス（{番号: Sound}。bunny_attack_<番号>.mp3 の番号をキーとし、攻撃手段ごとに候補番号を選んで再生する）
 voice_goblin_damaged = None  # 敵（ゴブリン）被弾やられボイス
+voice_heroine_damaged = None  # ヒロイン被弾やられボイス
+voice_samurai_damaged = None  # サムライ被弾やられボイス
+voice_warrior_damaged = None  # 女戦士被弾やられボイス
 voice_dance = None  # マカダンス開始時のかけ声
 voice_katana_slash = None  # サムライの刀の斬撃エフェクト開始時SE
 voice_shinganken_0 = None  # 心眼剣開始時のかけ声
@@ -1227,7 +1236,7 @@ def initialize():
     global result_heroine_win_img, result_samurai_win_img, result_warrior_win_img, enemy_img_raw, dance_images_raw, voice_win_by_number, voice_samurai_win_by_number, voice_warrior_win_by_number
     global heroine_front_img_raw, samurai_front_img_raw, samurai_back_img_raw, character_art_top_height_m
     global warrior_front_img_raw, warrior_back_img_raw
-    global voice_battle_start_list, voice_samurai_battle_start_list, voice_warrior_battle_start_list, voice_samurai_attack_list, voice_warrior_attack_list, voice_attack_by_number, voice_goblin_damaged, voice_dance, voice_katana_slash
+    global voice_battle_start_list, voice_samurai_battle_start_list, voice_warrior_battle_start_list, voice_samurai_attack_list, voice_warrior_attack_list, voice_attack_by_number, voice_goblin_damaged, voice_heroine_damaged, voice_samurai_damaged, voice_warrior_damaged, voice_dance, voice_katana_slash
     global voice_shinganken_0, voice_shinganken_1
     global player_world_x, player_world_y
 
@@ -1322,6 +1331,15 @@ def initialize():
 
     voice_goblin_damaged = pygame.mixer.Sound(VOICE_GOBLIN_DAMAGED_PATH)
     voice_goblin_damaged.set_volume(VOICE_GOBLIN_DAMAGED_VOLUME)
+
+    voice_heroine_damaged = pygame.mixer.Sound(VOICE_HEROINE_DAMAGED_PATH)
+    voice_heroine_damaged.set_volume(VOICE_HEROINE_DAMAGED_VOLUME)
+
+    voice_samurai_damaged = pygame.mixer.Sound(VOICE_SAMURAI_DAMAGED_PATH)
+    voice_samurai_damaged.set_volume(VOICE_SAMURAI_DAMAGED_VOLUME)
+
+    voice_warrior_damaged = pygame.mixer.Sound(VOICE_WARRIOR_DAMAGED_PATH)
+    voice_warrior_damaged.set_volume(VOICE_WARRIOR_DAMAGED_VOLUME)
 
     voice_dance = load_sound_at_speed(VOICE_DANCE_PATH, VOICE_DANCE_SPEED)
     voice_dance.set_volume(VOICE_DANCE_VOLUME)
@@ -2327,7 +2345,7 @@ def update(dt):
                                 advance_battle_turn()
                 else:
                     # 敵の番：battle_attacking_enemy_index の敵がヒロインに接近して攻撃する（流れはムチと同じ4ステート）
-                    # 敵の攻撃ボイス・ヒロインのやられボイスは未実装のため再生しない
+                    # 敵の攻撃ボイスは未実装のため再生しない
                     if battle_enemy_attack_phase == BATTLE_WHIP_PHASE_APPROACH:
                         battle_enemy_attack_frame += 1
                         if battle_enemy_attack_frame >= BATTLE_WHIP_APPROACH_FRAMES:
@@ -2351,6 +2369,8 @@ def update(dt):
                                 samurai_damage_anim_new_hp = samurai_hp
                                 samurai_damage_anim_frame  = 0
                                 samurai_damage_anim_flash_color = DAMAGE_FLASH_COLOR_ENEMY_ATTACK
+                                if voice_samurai_damaged:
+                                    voice_samurai_damaged.play()
                             elif battle_enemy_attack_target == -3:
                                 old_display_hp = get_damage_display_hp(warrior_damage_anim_old_hp, warrior_damage_anim_new_hp, warrior_damage_anim_frame)
                                 warrior_hp = max(0, warrior_hp - damage)
@@ -2358,6 +2378,8 @@ def update(dt):
                                 warrior_damage_anim_new_hp = warrior_hp
                                 warrior_damage_anim_frame  = 0
                                 warrior_damage_anim_flash_color = DAMAGE_FLASH_COLOR_ENEMY_ATTACK
+                                if voice_warrior_damaged:
+                                    voice_warrior_damaged.play()
                             else:
                                 old_display_hp = get_damage_display_hp(heroine_damage_anim_old_hp, heroine_damage_anim_new_hp, heroine_damage_anim_frame)
                                 heroine_hp = max(0, heroine_hp - damage)
@@ -2365,6 +2387,8 @@ def update(dt):
                                 heroine_damage_anim_new_hp = heroine_hp
                                 heroine_damage_anim_frame  = 0
                                 heroine_damage_anim_flash_color = DAMAGE_FLASH_COLOR_ENEMY_ATTACK
+                                if voice_heroine_damaged:
+                                    voice_heroine_damaged.play()
                             battle_enemy_attack_phase = BATTLE_WHIP_PHASE_RETURN
                             battle_enemy_attack_frame = 0
                     elif battle_enemy_attack_phase == BATTLE_WHIP_PHASE_RETURN:
