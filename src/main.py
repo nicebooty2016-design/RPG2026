@@ -94,7 +94,7 @@ RESULT_IDLE_MAX_HEIGHT_RATIO    = 2 * RESULT_IDLE_CENTER_HEIGHT_RATIO - RESULT_I
 # 縦横スケールの振れ幅（1.0 ± DELTA。中心状態の高さ RESULT_IDLE_CENTER_HEIGHT_RATIO に対する相対値）
 RESULT_IDLE_SCALE_DELTA = (RESULT_IDLE_MAX_HEIGHT_RATIO - RESULT_IDLE_MIN_HEIGHT_RATIO) / (2 * RESULT_IDLE_CENTER_HEIGHT_RATIO)
 
-# サムライの勝利バストショット（shota_front.png）：ゲームウィンドウ幅(SCREEN_W)がワールド座標値で
+# サムライの勝利バストショット（samurai_front.png）：ゲームウィンドウ幅(SCREEN_W)がワールド座標値で
 # 何mに該当するかを指定する。ここから算出したSAMURAI_HEIGHT_M分の高さに一度だけスケールし、
 # 以後リザルト中の追加の拡縮（待機モーションの拡縮等）は行わない
 RESULT_SAMURAI_WIN_WIDTH_M = 1.0
@@ -106,9 +106,9 @@ RESULT_VICTORY_MESSAGES = {
     1: '凄い、こんなの初めて…',
     2: 'もうイっちゃったの？',
 }
-# サムライがトドメを刺した場合の勝利ボイス（shota_win_<番号>.mp3）ごとに対応する勝利メッセージ本文
+# サムライがトドメを刺した場合の勝利ボイス（samurai_win_<番号>.mp3）ごとに対応する勝利メッセージ本文
 RESULT_SAMURAI_VICTORY_MESSAGES = {
-    0: 'エリ様、ご無事ですか・・・！？',
+    0: '皆さん、ご無事ですか・・・？',
 }
 VOICE_WIN_SPEED = 1.5  # 勝利ボイスの再生速度倍率（候補とも一律。この倍率に合わせて勝利メッセージの表示速度も変化する）
 # 再生速度変更時のピッチ維持（OLA法による時間伸縮）パラメータ
@@ -579,8 +579,8 @@ BACK_IMG_PATH = os.path.join(BASE_DIR, "..", "assets", "images", "characters", "
 HEROINE_FRONT_IMG_PATH = os.path.join(BASE_DIR, "..", "assets", "images", "characters", "bunny", "bunny_walk", "bunny_walk_0.png")
 WIN_IMG_PATH  = os.path.join(BASE_DIR, "..", "assets", "images", "characters", "bunny", "bunny_win.png")
 DANCE_DIR = os.path.join(BASE_DIR, "..", "assets", "images", "characters", "bunny", "bunny_dance_0")
-SAMURAI_FRONT_IMG_PATH = os.path.join(BASE_DIR, "..", "assets", "images", "characters", "shota", "shota_front.png")
-SAMURAI_BACK_IMG_PATH  = os.path.join(BASE_DIR, "..", "assets", "images", "characters", "shota", "shota_back.png")
+SAMURAI_FRONT_IMG_PATH = os.path.join(BASE_DIR, "..", "assets", "images", "characters", "samurai", "samurai_front.png")
+SAMURAI_BACK_IMG_PATH  = os.path.join(BASE_DIR, "..", "assets", "images", "characters", "samurai", "samurai_back.png")
 ENEMY_GOBLIN_IMG_PATH = os.path.join(BASE_DIR, "..", "assets", "images", "enemies", "goblin", "goblin_idle.png")
 VOICES_DIR = os.path.join(BASE_DIR, "..", "assets", "sound", "voices")
 VOICE_GOBLIN_DAMAGED_PATH = os.path.join(BASE_DIR, "..", "assets", "sound", "voices", "goblin_damaged.wav")
@@ -652,7 +652,7 @@ battle_back_img     = None  # 後ろ姿画像（スケール後）
 battle_back_img_raw = None  # 後ろ姿画像（オリジナル）
 result_win_img      = None  # 勝利バストショット画像（ヒロイン・スケール後）
 result_win_img_raw  = None  # 勝利バストショット画像（ヒロイン・オリジナル）
-result_samurai_win_img = None  # 勝利バストショット画像（サムライがトドメを刺した場合・shota_front.pngをSAMURAI_HEIGHT_M分の高さに一度だけスケール）
+result_samurai_win_img = None  # 勝利バストショット画像（サムライがトドメを刺した場合・samurai_front.pngをSAMURAI_HEIGHT_M分の高さに一度だけスケール）
 result_active_win_img = None  # リザルト開始時に選ばれた、実際に表示する勝利バストショット画像
 enemy_img_raw       = None  # 敵（goblin）画像（オリジナル）
 heroine_front_img_raw = None  # ヒロイン前姿画像（オリジナル） — ステータスウィンドウ用
@@ -664,14 +664,14 @@ hp_grayscale_full_cache = {}  # 画像全体をグレースケール化＋暗く
 HP_GRAYSCALE_CACHE_MAX_ENTRIES = 64  # hp_grayscale_cacheの最大保持数。ダメージ表現アニメーションで遷移中の中間HP値が次々キャッシュされ肥大化するのを防ぐ
 dance_images_raw    = []  # マカダンス演出用画像（bunny_dance_0_<番号>.png を番号順に並べたリスト。スケールは描画時に行う）
 voice_win_by_number = {}  # 勝利ボイス（{番号: Sound}。bunny_win_<番号>.mp3 の番号をキーとし、リザルト開始時にランダム選択する）
-voice_samurai_win_by_number = {}  # 勝利ボイス（サムライがトドメを刺した場合）（{番号: Sound}。shota_win_<番号>.mp3）
+voice_samurai_win_by_number = {}  # 勝利ボイス（サムライがトドメを刺した場合）（{番号: Sound}。samurai_win_<番号>.mp3）
 result_win_voice         = None  # リザルト開始時に選ばれた勝利ボイス（再生・長さ判定用）
 result_victory_message        = ''  # 選ばれた勝利ボイスに対応する勝利メッセージ本文
 result_message_complete_frame = 0  # 勝利メッセージが全文表示し終わるフレーム（= 最後の文字が追加される瞬間）
 result_win_bgm_start_frame    = 0  # 勝利BGMの再生を開始するフレーム（= メッセージ表示完了から指定フレーム経過した瞬間）
 voice_battle_start_list = []  # エンカウント時かけ声候補（bunny_battle_start_<番号>.mp3 を全て読み込み、再生時にランダム選択する）
-voice_samurai_battle_start_list = []  # エンカウント時（サムライ注視）かけ声候補（shota_battle_start_<番号>.mp3 を全て読み込み、再生時にランダム選択する）
-voice_samurai_attack_list = []  # サムライ攻撃時のかけ声候補（shota_attack_start_<番号>.mp3 を全て読み込み、再生時にランダム選択する）
+voice_samurai_battle_start_list = []  # エンカウント時（サムライ注視）かけ声候補（samurai_battle_start_<番号>.mp3 を全て読み込み、再生時にランダム選択する）
+voice_samurai_attack_list = []  # サムライ攻撃時のかけ声候補（samurai_attack_start_<番号>.mp3 を全て読み込み、再生時にランダム選択する）
 voice_attack_by_number = {}  # 攻撃ボイス（{番号: Sound}。bunny_attack_<番号>.mp3 の番号をキーとし、攻撃手段ごとに候補番号を選んで再生する）
 voice_goblin_damaged = None  # 敵（ゴブリン）被弾やられボイス
 voice_dance = None  # マカダンス開始時のかけ声
@@ -842,14 +842,14 @@ def load_win_voices():
     return voices_by_number
 
 # ---------------------------------------------------------
-# load_samurai_win_voices()：shota_win_<番号>.mp3 を全て検出して読み込み、
+# load_samurai_win_voices()：samurai_win_<番号>.mp3 を全て検出して読み込み、
 #                            再生速度変更後のSoundを {番号: Sound} の辞書として返す
 #                            （サムライがトドメを刺した場合のリザルト開始時にランダム選択し、
 #                              対応する勝利メッセージ RESULT_SAMURAI_VICTORY_MESSAGES と組み合わせて使う）
 # ---------------------------------------------------------
 def load_samurai_win_voices():
     files = [f for f in os.listdir(VOICES_DIR)
-             if f.lower().endswith(".mp3") and f.startswith("shota_win_")]
+             if f.lower().endswith(".mp3") and f.startswith("samurai_win_")]
 
     def voice_number(fname):
         return int(os.path.splitext(fname)[0].split("_")[-1])
@@ -886,12 +886,12 @@ def play_battle_start_voice():
         random.choice(voice_battle_start_list).play()
 
 # ---------------------------------------------------------
-# load_samurai_battle_start_voices()：shota_battle_start_<番号>.mp3 を全て検出して読み込み、
+# load_samurai_battle_start_voices()：samurai_battle_start_<番号>.mp3 を全て検出して読み込み、
 #                                     Soundのリストとして返す（エンカウントのたびランダムに選んで再生する）
 # ---------------------------------------------------------
 def load_samurai_battle_start_voices():
     files = [f for f in os.listdir(VOICES_DIR)
-             if f.lower().endswith(".mp3") and f.startswith("shota_battle_start_")]
+             if f.lower().endswith(".mp3") and f.startswith("samurai_battle_start_")]
 
     voices = []
     for fname in files:
@@ -909,12 +909,12 @@ def play_samurai_battle_start_voice():
         random.choice(voice_samurai_battle_start_list).play()
 
 # ---------------------------------------------------------
-# load_samurai_attack_voices()：shota_attack_start_<番号>.mp3 を全て検出して読み込み、
+# load_samurai_attack_voices()：samurai_attack_start_<番号>.mp3 を全て検出して読み込み、
 #                               Soundのリストとして返す（サムライの攻撃の番のたびランダムに選んで再生する）
 # ---------------------------------------------------------
 def load_samurai_attack_voices():
     files = [f for f in os.listdir(VOICES_DIR)
-             if f.lower().endswith(".mp3") and f.startswith("shota_attack_start_")]
+             if f.lower().endswith(".mp3") and f.startswith("samurai_attack_start_")]
 
     voices = []
     for fname in files:
@@ -1134,10 +1134,10 @@ def initialize():
     character_art_top_height_m["goblin_idle.png"] = scan_art_top_height_m(enemy_img_raw, ENEMY_GOBLIN_HEIGHT_M)
     character_art_top_height_m["bunny_front.png"] = scan_art_top_height_m(heroine_front_img_raw, HEROINE_HEIGHT_M)
     character_art_top_height_m["bunny_back.png"]  = scan_art_top_height_m(battle_back_img_raw, HEROINE_HEIGHT_M)
-    character_art_top_height_m["shota_front.png"] = scan_art_top_height_m(samurai_front_img_raw, SAMURAI_HEIGHT_M)
-    character_art_top_height_m["shota_back.png"]  = scan_art_top_height_m(samurai_back_img_raw, SAMURAI_HEIGHT_M)
+    character_art_top_height_m["samurai_front.png"] = scan_art_top_height_m(samurai_front_img_raw, SAMURAI_HEIGHT_M)
+    character_art_top_height_m["samurai_back.png"]  = scan_art_top_height_m(samurai_back_img_raw, SAMURAI_HEIGHT_M)
 
-    # ★ 勝利バストショット画像（サムライがトドメを刺した場合）：shota_front.pngを、
+    # ★ 勝利バストショット画像（サムライがトドメを刺した場合）：samurai_front.pngを、
     # RESULT_SAMURAI_WIN_WIDTH_M（ゲームウィンドウ幅が何mに相当するか）から算出した
     # SAMURAI_HEIGHT_M分の高さに一度だけスケールする（以後リザルト中の追加の拡縮は行わない）
     result_samurai_win_meter_to_pixel = SCREEN_W / RESULT_SAMURAI_WIN_WIDTH_M
@@ -2871,7 +2871,7 @@ def render_battle():
 
         # ★ サムライ（仲間キャラ）の後ろ姿：ヒロインの1m右を基準位置とし、剣（近接攻撃）の番には敵に接近・後退する
         sam_back_img_raw = samurai_back_img_raw
-        sam_back_art_key = "shota_back.png"
+        sam_back_art_key = "samurai_back.png"
         if sam_back_img_raw:
             sam_orig_w, sam_orig_h = sam_back_img_raw.get_size()
 
@@ -3147,10 +3147,10 @@ def render_result():
         cx = int(start_cx + (end_cx - start_cx) * t_eased)
 
         if result_flashout_is_samurai:
-            # サムライ（shota_front.png）：緑線（実際の絵の上端）がゲームウィンドウ上端(band_y)に
+            # サムライ（samurai_front.png）：緑線（実際の絵の上端）がゲームウィンドウ上端(band_y)に
             # 一致するように配置する（initialize()で一度だけ行ったスケールのまま、追加の拡縮は行わない）
             win_h = result_active_win_img.get_height()
-            art_height_m = character_art_top_height_m.get("shota_front.png", 0.0)
+            art_height_m = character_art_top_height_m.get("samurai_front.png", 0.0)
             art_top_offset = int(win_h * art_height_m / SAMURAI_HEIGHT_M) if SAMURAI_HEIGHT_M > 0 else 0
             img_rect = result_active_win_img.get_rect(midbottom=(cx, band_y + art_top_offset))
         else:
@@ -3276,9 +3276,9 @@ def render_status():
         if is_debug:
             pygame.draw.rect(screen, (255, 255, 255), img_rect, 1)  # ★ [デバッグ] 元画像サイズの枠線
             if status_view == STATUS_VIEW_FRONT:
-                samurai_art_key = "shota_front.png"
+                samurai_art_key = "samurai_front.png"
             else:
-                samurai_art_key = "shota_back.png"
+                samurai_art_key = "samurai_back.png"
             draw_art_top_debug_line(samurai_art_key, SAMURAI_HEIGHT_M, band_bottom, img_h, img_rect.left, img_rect.right)  # ★ [デバッグ] 実際の絵の上端
 
     screen.set_clip(None)
