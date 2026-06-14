@@ -527,7 +527,8 @@ PLAYER_COLLIDER_RADIUS = 0.25
 # ---------------------------------------------------------
 METER_TO_PIXEL = 64
 HEROINE_HEIGHT_M = 2.0  # ヒロインの身長（メートル）
-SAMURAI_HEIGHT_M = 1.6  # サムライの身長（メートル）
+SAMURAI_HEIGHT_M = 1.55  # サムライの身長（メートル）
+WARRIOR_HEIGHT_M = 2.1  # 女戦士の身長（メートル）
 ENEMY_GOBLIN_HEIGHT_M = 1.2  # ゴブリンの身長（メートル）。立ち姿画像のデバッグ表示（実際の絵の上端の算出）に使用
 HP_GRAYSCALE_DARKNESS = 0.5  # HP低下によるグレースケール表示の暗さ（1=通常のグレースケール、0=真っ黒）
 
@@ -581,6 +582,8 @@ WIN_IMG_PATH  = os.path.join(BASE_DIR, "..", "assets", "images", "characters", "
 DANCE_DIR = os.path.join(BASE_DIR, "..", "assets", "images", "characters", "bunny", "bunny_dance_0")
 SAMURAI_FRONT_IMG_PATH = os.path.join(BASE_DIR, "..", "assets", "images", "characters", "samurai", "samurai_front.png")
 SAMURAI_BACK_IMG_PATH  = os.path.join(BASE_DIR, "..", "assets", "images", "characters", "samurai", "samurai_back.png")
+WARRIOR_FRONT_IMG_PATH = os.path.join(BASE_DIR, "..", "assets", "images", "characters", "warrior", "warrior_front.png")
+WARRIOR_BACK_IMG_PATH  = os.path.join(BASE_DIR, "..", "assets", "images", "characters", "warrior", "warrior_back.png")
 ENEMY_GOBLIN_IMG_PATH = os.path.join(BASE_DIR, "..", "assets", "images", "enemies", "goblin", "goblin_idle.png")
 VOICES_DIR = os.path.join(BASE_DIR, "..", "assets", "sound", "voices")
 VOICE_GOBLIN_DAMAGED_PATH = os.path.join(BASE_DIR, "..", "assets", "sound", "voices", "goblin_damaged.wav")
@@ -658,6 +661,8 @@ enemy_img_raw       = None  # 敵（goblin）画像（オリジナル）
 heroine_front_img_raw = None  # ヒロイン前姿画像（オリジナル） — ステータスウィンドウ用
 samurai_front_img_raw = None  # サムライ前姿画像（オリジナル） — ステータスウィンドウ用
 samurai_back_img_raw  = None  # サムライ後ろ姿画像（オリジナル） — ステータスウィンドウ用
+warrior_front_img_raw = None  # 女戦士前姿画像（オリジナル） — ステータスウィンドウ用
+warrior_back_img_raw  = None  # 女戦士後ろ姿画像（オリジナル） — ステータスウィンドウ用
 character_art_top_height_m = {}  # 各立ち姿画像で実際の絵が始まる高さ（{ファイル名: 画像下端からの高さ（メートル）}）。is_debug時の緑線表示・HPグレースケール表示に使用
 hp_grayscale_cache = {}  # HPに応じたグレースケール合成画像のキャッシュ（{(ファイル名, 現在HP, 最大HP): Surface}）
 hp_grayscale_full_cache = {}  # 画像全体をグレースケール化＋暗くした画像のキャッシュ（{ファイル名: Surface}）。HPに依存しない部分を一度だけ計算する
@@ -1088,6 +1093,7 @@ def initialize():
     global tile_map, walk_images, walk_image_filenames, last_image, battle_back_img, battle_back_img_raw
     global result_win_img, result_win_img_raw, result_samurai_win_img, enemy_img_raw, dance_images_raw, voice_win_by_number, voice_samurai_win_by_number
     global heroine_front_img_raw, samurai_front_img_raw, samurai_back_img_raw, character_art_top_height_m
+    global warrior_front_img_raw, warrior_back_img_raw
     global voice_battle_start_list, voice_samurai_battle_start_list, voice_samurai_attack_list, voice_attack_by_number, voice_goblin_damaged, voice_dance, voice_katana_slash
     global voice_shinganken_0, voice_shinganken_1
     global player_world_x, player_world_y
@@ -1124,11 +1130,13 @@ def initialize():
     # ★ 敵（goblin）画像を読み込み（描画時にスケールするためオリジナルのみ保持）
     enemy_img_raw = pygame.image.load(ENEMY_GOBLIN_IMG_PATH).convert_alpha()
 
-    # ★ ステータスウィンドウ用：ヒロイン・サムライの前姿／後ろ姿画像を読み込み（描画時にスケールするためオリジナルのまま保持）
+    # ★ ステータスウィンドウ用：ヒロイン・サムライ・女戦士の前姿／後ろ姿画像を読み込み（描画時にスケールするためオリジナルのまま保持）
     # （bunny_front.pngは未用意のため、代わりにヒロインの前姿として既存のbunny_walk_0.pngを使う）
     heroine_front_img_raw = pygame.image.load(HEROINE_FRONT_IMG_PATH).convert_alpha()
     samurai_front_img_raw = pygame.image.load(SAMURAI_FRONT_IMG_PATH).convert_alpha()
     samurai_back_img_raw  = pygame.image.load(SAMURAI_BACK_IMG_PATH).convert_alpha()
+    warrior_front_img_raw = pygame.image.load(WARRIOR_FRONT_IMG_PATH).convert_alpha()
+    warrior_back_img_raw  = pygame.image.load(WARRIOR_BACK_IMG_PATH).convert_alpha()
 
     # ★ [デバッグ] 立ち姿画像ごとに「実際のキャラ絵が始まる高さ」をワールド座標系（メートル）で算出して記録する
     character_art_top_height_m["goblin_idle.png"] = scan_art_top_height_m(enemy_img_raw, ENEMY_GOBLIN_HEIGHT_M)
@@ -1136,6 +1144,8 @@ def initialize():
     character_art_top_height_m["bunny_back.png"]  = scan_art_top_height_m(battle_back_img_raw, HEROINE_HEIGHT_M)
     character_art_top_height_m["samurai_front.png"] = scan_art_top_height_m(samurai_front_img_raw, SAMURAI_HEIGHT_M)
     character_art_top_height_m["samurai_back.png"]  = scan_art_top_height_m(samurai_back_img_raw, SAMURAI_HEIGHT_M)
+    character_art_top_height_m["warrior_front.png"] = scan_art_top_height_m(warrior_front_img_raw, WARRIOR_HEIGHT_M)
+    character_art_top_height_m["warrior_back.png"]  = scan_art_top_height_m(warrior_back_img_raw, WARRIOR_HEIGHT_M)
 
     # ★ 勝利バストショット画像（サムライがトドメを刺した場合）：samurai_front.pngを、
     # RESULT_SAMURAI_WIN_WIDTH_M（ゲームウィンドウ幅が何mに相当するか）から算出した
@@ -3239,10 +3249,11 @@ def render_status():
     overlay.fill((0, 0, 0))
     screen.blit(overlay, (0, band_y))
 
-    # ★ ヒロイン・サムライを身長(STATUS_*_HEIGHT_M)に応じたサイズで、足元をウィンドウ下端に揃えて並べて表示する
-    # （STATUS_METER_TO_PIXEL：1mあたりのピクセル数。STATUS_CHARACTER_SPACING_M：足元中心の横方向の間隔）
+    # ★ ヒロイン・サムライ・女戦士を身長(STATUS_*_HEIGHT_M)に応じたサイズで、足元をウィンドウ下端に揃えて
+    # 左からヒロイン・サムライ・女戦士の順に並べて表示する
+    # （STATUS_METER_TO_PIXEL：1mあたりのピクセル数。STATUS_CHARACTER_SPACING_M：隣り合うキャラの足元中心の横方向の間隔）
     cx = SCREEN_W // 2
-    half_spacing_px = int(STATUS_CHARACTER_SPACING_M / 2 * STATUS_METER_TO_PIXEL)
+    spacing_px = int(STATUS_CHARACTER_SPACING_M * STATUS_METER_TO_PIXEL)
 
     clip_rect = pygame.Rect(0, band_y, SCREEN_W, current_height)
     screen.set_clip(clip_rect)
@@ -3251,15 +3262,17 @@ def render_status():
     heroine_img_raw = heroine_front_img_raw if status_view == STATUS_VIEW_FRONT else battle_back_img_raw
     if status_view == STATUS_VIEW_FRONT:
         samurai_img_raw = samurai_front_img_raw
+        warrior_img_raw = warrior_front_img_raw
     else:
         samurai_img_raw = samurai_back_img_raw
+        warrior_img_raw = warrior_back_img_raw
 
     if heroine_img_raw:
         img_h = int(HEROINE_HEIGHT_M * STATUS_METER_TO_PIXEL)
         orig_w, orig_h = heroine_img_raw.get_size()
         img_w = max(1, int(orig_w * img_h / orig_h))
         img = pygame.transform.smoothscale(heroine_img_raw, (img_w, img_h))
-        img_rect = img.get_rect(midbottom=(cx - half_spacing_px, band_bottom))
+        img_rect = img.get_rect(midbottom=(cx - spacing_px, band_bottom))
         screen.blit(img, img_rect)
         if is_debug:
             pygame.draw.rect(screen, (255, 255, 255), img_rect, 1)  # ★ [デバッグ] 元画像サイズの枠線
@@ -3271,7 +3284,7 @@ def render_status():
         orig_w, orig_h = samurai_img_raw.get_size()
         img_w = max(1, int(orig_w * img_h / orig_h))
         img = pygame.transform.smoothscale(samurai_img_raw, (img_w, img_h))
-        img_rect = img.get_rect(midbottom=(cx + half_spacing_px, band_bottom))
+        img_rect = img.get_rect(midbottom=(cx, band_bottom))
         screen.blit(img, img_rect)
         if is_debug:
             pygame.draw.rect(screen, (255, 255, 255), img_rect, 1)  # ★ [デバッグ] 元画像サイズの枠線
@@ -3280,6 +3293,21 @@ def render_status():
             else:
                 samurai_art_key = "samurai_back.png"
             draw_art_top_debug_line(samurai_art_key, SAMURAI_HEIGHT_M, band_bottom, img_h, img_rect.left, img_rect.right)  # ★ [デバッグ] 実際の絵の上端
+
+    if warrior_img_raw:
+        img_h = int(WARRIOR_HEIGHT_M * STATUS_METER_TO_PIXEL)
+        orig_w, orig_h = warrior_img_raw.get_size()
+        img_w = max(1, int(orig_w * img_h / orig_h))
+        img = pygame.transform.smoothscale(warrior_img_raw, (img_w, img_h))
+        img_rect = img.get_rect(midbottom=(cx + spacing_px, band_bottom))
+        screen.blit(img, img_rect)
+        if is_debug:
+            pygame.draw.rect(screen, (255, 255, 255), img_rect, 1)  # ★ [デバッグ] 元画像サイズの枠線
+            if status_view == STATUS_VIEW_FRONT:
+                warrior_art_key = "warrior_front.png"
+            else:
+                warrior_art_key = "warrior_back.png"
+            draw_art_top_debug_line(warrior_art_key, WARRIOR_HEIGHT_M, band_bottom, img_h, img_rect.left, img_rect.right)  # ★ [デバッグ] 実際の絵の上端
 
     screen.set_clip(None)
 
