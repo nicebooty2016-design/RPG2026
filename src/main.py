@@ -128,7 +128,7 @@ RESULT_WIN_BGM_START_SEC   = 157.6  # 勝利BGM代用：再生開始時にbattle
 
 # 音量
 BGM_BATTLE_VOLUME = 0.30  # バトルBGM音量（0.0～1.0）
-BGM_BATTLE2_VOLUME = 0.10  # 戦闘曲（battle2.mp3）の音量（0.0～1.0）
+BGM_BATTLE2_VOLUME = 0.15  # 戦闘曲（battle2.mp3）の音量（0.0～1.0）
 VOICE_WIN_VOLUME  = 1.0  # 勝利ボイス音量（0.0～1.0）
 VOICE_BATTLE_START_VOLUME = 1.0  # エンカウント時かけ声の音量（0.0～1.0）
 VOICE_BATTLE_START_SPEED = 1.3  # エンカウント時かけ声の再生速度倍率（候補とも一律）
