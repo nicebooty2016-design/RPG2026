@@ -435,8 +435,8 @@ BATTLE_DANCE_PHASE_DANCE = 1  # バトルウィンドウがピンクに染まり
 battle_dance_phase = BATTLE_DANCE_PHASE_SINK
 battle_dance_frame = 0
 
-# マカダンス（味方バフ）演出：ピンクの点滅演出が終わった直後から、サムライの画像表示を強化版（shota2_*）に切り替える。
-# そのバトルが終了するまで（リザルト画面を含み、フィールドへ戻るまで）継続する
+# マカダンス（味方バフ）演出：ピンクの点滅演出が終わると、以後そのバトルが終了するまで
+# （リザルト画面を含み、フィールドへ戻るまで）サムライは「心眼剣」のみ使用可能になる
 samurai_powered_up = False
 
 # 攻防ステート内の行動順：サムライの行動決定後に、生存している敵全体・ヒロイン・サムライを含めてランダムに決定する
@@ -581,9 +581,6 @@ WIN_IMG_PATH  = os.path.join(BASE_DIR, "..", "assets", "images", "characters", "
 DANCE_DIR = os.path.join(BASE_DIR, "..", "assets", "images", "characters", "bunny", "bunny_dance_0")
 SAMURAI_FRONT_IMG_PATH = os.path.join(BASE_DIR, "..", "assets", "images", "characters", "shota", "shota_front.png")
 SAMURAI_BACK_IMG_PATH  = os.path.join(BASE_DIR, "..", "assets", "images", "characters", "shota", "shota_back.png")
-# マカダンス後の強化版サムライ画像（ピンクの点滅演出が終わった後、バトル終了まで表示を切り替える）
-SAMURAI2_FRONT_IMG_PATH = os.path.join(BASE_DIR, "..", "assets", "images", "characters", "shota", "shota2_front.png")
-SAMURAI2_BACK_IMG_PATH  = os.path.join(BASE_DIR, "..", "assets", "images", "characters", "shota", "shota2_back.png")
 ENEMY_GOBLIN_IMG_PATH = os.path.join(BASE_DIR, "..", "assets", "images", "enemies", "goblin", "goblin_idle.png")
 VOICES_DIR = os.path.join(BASE_DIR, "..", "assets", "sound", "voices")
 VOICE_GOBLIN_DAMAGED_PATH = os.path.join(BASE_DIR, "..", "assets", "sound", "voices", "goblin_damaged.wav")
@@ -661,8 +658,6 @@ enemy_img_raw       = None  # 敵（goblin）画像（オリジナル）
 heroine_front_img_raw = None  # ヒロイン前姿画像（オリジナル） — ステータスウィンドウ用
 samurai_front_img_raw = None  # サムライ前姿画像（オリジナル） — ステータスウィンドウ用
 samurai_back_img_raw  = None  # サムライ後ろ姿画像（オリジナル） — ステータスウィンドウ用
-samurai2_front_img_raw = None  # マカダンス後の強化版サムライ前姿画像（オリジナル）
-samurai2_back_img_raw  = None  # マカダンス後の強化版サムライ後ろ姿画像（オリジナル）
 character_art_top_height_m = {}  # 各立ち姿画像で実際の絵が始まる高さ（{ファイル名: 画像下端からの高さ（メートル）}）。is_debug時の緑線表示・HPグレースケール表示に使用
 hp_grayscale_cache = {}  # HPに応じたグレースケール合成画像のキャッシュ（{(ファイル名, 現在HP, 最大HP): Surface}）
 hp_grayscale_full_cache = {}  # 画像全体をグレースケール化＋暗くした画像のキャッシュ（{ファイル名: Surface}）。HPに依存しない部分を一度だけ計算する
@@ -1093,7 +1088,6 @@ def initialize():
     global tile_map, walk_images, walk_image_filenames, last_image, battle_back_img, battle_back_img_raw
     global result_win_img, result_win_img_raw, result_samurai_win_img, enemy_img_raw, dance_images_raw, voice_win_by_number, voice_samurai_win_by_number
     global heroine_front_img_raw, samurai_front_img_raw, samurai_back_img_raw, character_art_top_height_m
-    global samurai2_front_img_raw, samurai2_back_img_raw
     global voice_battle_start_list, voice_samurai_battle_start_list, voice_samurai_attack_list, voice_attack_by_number, voice_goblin_damaged, voice_dance, voice_katana_slash
     global voice_shinganken_0, voice_shinganken_1
     global player_world_x, player_world_y
@@ -1135,9 +1129,6 @@ def initialize():
     heroine_front_img_raw = pygame.image.load(HEROINE_FRONT_IMG_PATH).convert_alpha()
     samurai_front_img_raw = pygame.image.load(SAMURAI_FRONT_IMG_PATH).convert_alpha()
     samurai_back_img_raw  = pygame.image.load(SAMURAI_BACK_IMG_PATH).convert_alpha()
-    # ★ マカダンス後の強化版サムライ画像を読み込み（ピンクの点滅演出が終わった後、バトル終了まで表示を切り替える）
-    samurai2_front_img_raw = pygame.image.load(SAMURAI2_FRONT_IMG_PATH).convert_alpha()
-    samurai2_back_img_raw  = pygame.image.load(SAMURAI2_BACK_IMG_PATH).convert_alpha()
 
     # ★ [デバッグ] 立ち姿画像ごとに「実際のキャラ絵が始まる高さ」をワールド座標系（メートル）で算出して記録する
     character_art_top_height_m["goblin_idle.png"] = scan_art_top_height_m(enemy_img_raw, ENEMY_GOBLIN_HEIGHT_M)
@@ -1145,8 +1136,6 @@ def initialize():
     character_art_top_height_m["bunny_back.png"]  = scan_art_top_height_m(battle_back_img_raw, HEROINE_HEIGHT_M)
     character_art_top_height_m["shota_front.png"] = scan_art_top_height_m(samurai_front_img_raw, SAMURAI_HEIGHT_M)
     character_art_top_height_m["shota_back.png"]  = scan_art_top_height_m(samurai_back_img_raw, SAMURAI_HEIGHT_M)
-    character_art_top_height_m["shota2_front.png"] = scan_art_top_height_m(samurai2_front_img_raw, SAMURAI_HEIGHT_M)
-    character_art_top_height_m["shota2_back.png"]  = scan_art_top_height_m(samurai2_back_img_raw, SAMURAI_HEIGHT_M)
 
     # ★ 勝利バストショット画像（サムライがトドメを刺した場合）：shota_front.pngを、
     # RESULT_SAMURAI_WIN_WIDTH_M（ゲームウィンドウ幅が何mに相当するか）から算出した
@@ -2063,7 +2052,7 @@ def update(dt):
                             battle_dance_frame += 1
                             if battle_dance_frame >= BATTLE_DANCE_SCROLL_FRAMES:
                                 pygame.mixer.music.stop()
-                                # ★ サムライのピンク点滅演出が終わったので、以後バトル終了まで見た目を強化版（shota2_*）に切り替える
+                                # ★ サムライのピンク点滅演出が終わったので、以後バトル終了まで「心眼剣」を使用可能にする
                                 samurai_powered_up = True
                                 advance_battle_turn()
                 else:
