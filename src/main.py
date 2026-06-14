@@ -94,6 +94,11 @@ RESULT_IDLE_MAX_HEIGHT_RATIO    = 2 * RESULT_IDLE_CENTER_HEIGHT_RATIO - RESULT_I
 # 縦横スケールの振れ幅（1.0 ± DELTA。中心状態の高さ RESULT_IDLE_CENTER_HEIGHT_RATIO に対する相対値）
 RESULT_IDLE_SCALE_DELTA = (RESULT_IDLE_MAX_HEIGHT_RATIO - RESULT_IDLE_MIN_HEIGHT_RATIO) / (2 * RESULT_IDLE_CENTER_HEIGHT_RATIO)
 
+# サムライの勝利バストショット（shota_front.png）：ゲームウィンドウ幅(SCREEN_W)がワールド座標値で
+# 何mに該当するかを指定する。ここから算出したSAMURAI_HEIGHT_M分の高さに一度だけスケールし、
+# 以後リザルト中の追加の拡縮（待機モーションの拡縮等）は行わない
+RESULT_SAMURAI_WIN_WIDTH_M = 1.0
+
 # 勝利ボイス（bunny_win_<番号>.mp3）ごとに対応する勝利メッセージ本文。
 # リザルト開始時にボイスをランダム選択し、対応するメッセージを表示する
 RESULT_VICTORY_MESSAGES = {
@@ -573,7 +578,6 @@ WALK_DIR = os.path.join(BASE_DIR, "..", "assets", "images", "characters", "bunny
 BACK_IMG_PATH = os.path.join(BASE_DIR, "..", "assets", "images", "characters", "bunny", "bunny_back.png")
 HEROINE_FRONT_IMG_PATH = os.path.join(BASE_DIR, "..", "assets", "images", "characters", "bunny", "bunny_walk", "bunny_walk_0.png")
 WIN_IMG_PATH  = os.path.join(BASE_DIR, "..", "assets", "images", "characters", "bunny", "bunny_win.png")
-SAMURAI_WIN_IMG_PATH = os.path.join(BASE_DIR, "..", "assets", "images", "characters", "shota", "shota_win_0.png")
 DANCE_DIR = os.path.join(BASE_DIR, "..", "assets", "images", "characters", "bunny", "bunny_dance_0")
 SAMURAI_FRONT_IMG_PATH = os.path.join(BASE_DIR, "..", "assets", "images", "characters", "shota", "shota_front.png")
 SAMURAI_BACK_IMG_PATH  = os.path.join(BASE_DIR, "..", "assets", "images", "characters", "shota", "shota_back.png")
@@ -651,7 +655,7 @@ battle_back_img     = None  # 後ろ姿画像（スケール後）
 battle_back_img_raw = None  # 後ろ姿画像（オリジナル）
 result_win_img      = None  # 勝利バストショット画像（ヒロイン・スケール後）
 result_win_img_raw  = None  # 勝利バストショット画像（ヒロイン・オリジナル）
-result_samurai_win_img = None  # 勝利バストショット画像（サムライがトドメを刺した場合・スケール後）
+result_samurai_win_img = None  # 勝利バストショット画像（サムライがトドメを刺した場合・shota_front.pngをSAMURAI_HEIGHT_M分の高さに一度だけスケール）
 result_active_win_img = None  # リザルト開始時に選ばれた、実際に表示する勝利バストショット画像
 enemy_img_raw       = None  # 敵（goblin）画像（オリジナル）
 heroine_front_img_raw = None  # ヒロイン前姿画像（オリジナル） — ステータスウィンドウ用
@@ -1123,13 +1127,6 @@ def initialize():
     result_win_img_raw = win_raw   # グローバル変数に保存
     result_win_img = pygame.transform.smoothscale(win_raw, (win_img_w, BATTLE_MAIN_WINDOW_HEIGHT))
 
-    # ★ 勝利バストショット画像（サムライがトドメを刺した場合）を読み込み（同様に等方スケーリング）
-    samurai_win_raw = pygame.image.load(SAMURAI_WIN_IMG_PATH).convert_alpha()
-    samurai_win_orig_w, samurai_win_orig_h = samurai_win_raw.get_size()
-    samurai_win_scale = BATTLE_MAIN_WINDOW_HEIGHT / samurai_win_orig_h
-    samurai_win_img_w = max(1, int(samurai_win_orig_w * samurai_win_scale))
-    result_samurai_win_img = pygame.transform.smoothscale(samurai_win_raw, (samurai_win_img_w, BATTLE_MAIN_WINDOW_HEIGHT))
-
     # ★ 敵（goblin）画像を読み込み（描画時にスケールするためオリジナルのみ保持）
     enemy_img_raw = pygame.image.load(ENEMY_GOBLIN_IMG_PATH).convert_alpha()
 
@@ -1150,6 +1147,15 @@ def initialize():
     character_art_top_height_m["shota_back.png"]  = scan_art_top_height_m(samurai_back_img_raw, SAMURAI_HEIGHT_M)
     character_art_top_height_m["shota2_front.png"] = scan_art_top_height_m(samurai2_front_img_raw, SAMURAI_HEIGHT_M)
     character_art_top_height_m["shota2_back.png"]  = scan_art_top_height_m(samurai2_back_img_raw, SAMURAI_HEIGHT_M)
+
+    # ★ 勝利バストショット画像（サムライがトドメを刺した場合）：shota_front.pngを、
+    # RESULT_SAMURAI_WIN_WIDTH_M（ゲームウィンドウ幅が何mに相当するか）から算出した
+    # SAMURAI_HEIGHT_M分の高さに一度だけスケールする（以後リザルト中の追加の拡縮は行わない）
+    result_samurai_win_meter_to_pixel = SCREEN_W / RESULT_SAMURAI_WIN_WIDTH_M
+    sam_win_orig_w, sam_win_orig_h = samurai_front_img_raw.get_size()
+    sam_win_img_h = max(1, int(SAMURAI_HEIGHT_M * result_samurai_win_meter_to_pixel))
+    sam_win_img_w = max(1, int(sam_win_orig_w * sam_win_img_h / sam_win_orig_h))
+    result_samurai_win_img = pygame.transform.smoothscale(samurai_front_img_raw, (sam_win_img_w, sam_win_img_h))
 
     # ★ マカダンス演出用画像を読み込み（描画時にスケールするためオリジナルのまま保持）
     dance_images_raw = load_dance_images()
@@ -3151,7 +3157,15 @@ def render_result():
         end_cx   = SCREEN_W // 2
         cx = int(start_cx + (end_cx - start_cx) * t_eased)
 
-        img_rect = result_active_win_img.get_rect(midtop=(cx, band_y))
+        if result_flashout_is_samurai:
+            # サムライ（shota_front.png）：緑線（実際の絵の上端）がゲームウィンドウ上端(band_y)に
+            # 一致するように配置する（initialize()で一度だけ行ったスケールのまま、追加の拡縮は行わない）
+            win_h = result_active_win_img.get_height()
+            art_height_m = character_art_top_height_m.get("shota_front.png", 0.0)
+            art_top_offset = int(win_h * art_height_m / SAMURAI_HEIGHT_M) if SAMURAI_HEIGHT_M > 0 else 0
+            img_rect = result_active_win_img.get_rect(midbottom=(cx, band_y + art_top_offset))
+        else:
+            img_rect = result_active_win_img.get_rect(midtop=(cx, band_y))
 
         arrived = (result_slidein_frame >= RESULT_SLIDEIN_FRAMES)
 
@@ -3161,15 +3175,20 @@ def render_result():
             overlay_result.fill(RESULT_WINDOW_COLOR)
             screen.blit(overlay_result, (0, band_y))
 
-            # 黒シルエット解除後の待機モーション：縦横逆位相スクワッシュ（バトル中の待機モーションと周期を共用）
-            # バトルウィンドウ下端＝バストアップ画像下端を基準に、中心状態の高さを RESULT_IDLE_CENTER_HEIGHT_RATIO 倍として拡縮する
-            idle_t = math.sin(result_win_idle_frame / BATTLE_HEROINE_IDLE_PERIOD_FRAMES * 2 * math.pi)
-            idle_sx = 1.0 + RESULT_IDLE_SCALE_DELTA * idle_t
-            idle_sy = 1.0 - RESULT_IDLE_SCALE_DELTA * idle_t
-            idle_w = max(1, round(win_w * RESULT_IDLE_CENTER_HEIGHT_RATIO * idle_sx))
-            idle_h = max(1, round(BATTLE_MAIN_WINDOW_HEIGHT * RESULT_IDLE_CENTER_HEIGHT_RATIO * idle_sy))
-            display_img = pygame.transform.smoothscale(result_active_win_img, (idle_w, idle_h))
-            display_rect = display_img.get_rect(midbottom=img_rect.midbottom)
+            if result_flashout_is_samurai:
+                # サムライ：待機モーションの拡縮は行わず、initialize()で算出したサイズのまま静止表示する
+                display_img = result_active_win_img
+                display_rect = display_img.get_rect(midbottom=img_rect.midbottom)
+            else:
+                # 黒シルエット解除後の待機モーション：縦横逆位相スクワッシュ（バトル中の待機モーションと周期を共用）
+                # バトルウィンドウ下端＝バストアップ画像下端を基準に、中心状態の高さを RESULT_IDLE_CENTER_HEIGHT_RATIO 倍として拡縮する
+                idle_t = math.sin(result_win_idle_frame / BATTLE_HEROINE_IDLE_PERIOD_FRAMES * 2 * math.pi)
+                idle_sx = 1.0 + RESULT_IDLE_SCALE_DELTA * idle_t
+                idle_sy = 1.0 - RESULT_IDLE_SCALE_DELTA * idle_t
+                idle_w = max(1, round(win_w * RESULT_IDLE_CENTER_HEIGHT_RATIO * idle_sx))
+                idle_h = max(1, round(BATTLE_MAIN_WINDOW_HEIGHT * RESULT_IDLE_CENTER_HEIGHT_RATIO * idle_sy))
+                display_img = pygame.transform.smoothscale(result_active_win_img, (idle_w, idle_h))
+                display_rect = display_img.get_rect(midbottom=img_rect.midbottom)
 
             screen.set_clip(pygame.Rect(0, band_y, SCREEN_W, BATTLE_MAIN_WINDOW_HEIGHT))
             screen.blit(display_img, display_rect)
