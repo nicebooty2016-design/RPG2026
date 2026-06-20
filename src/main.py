@@ -101,6 +101,16 @@ RESULT_WARRIOR_WIN_WIDTH_M = 1.0
 # 表示位置：バストショット画像の上端から何mの位置を、ゲームウィンドウ上端に一致させるか
 RESULT_WARRIOR_WIN_TOP_MARGIN_M = 0.20
 
+# シスター・くノ一・魔法使い・武道家の勝利バストショット（各自のfront.png）
+RESULT_SISTER_WIN_WIDTH_M   = 1.0
+RESULT_SISTER_WIN_TOP_MARGIN_M = 0.15
+RESULT_KUNOICHI_WIN_WIDTH_M = 1.0
+RESULT_KUNOICHI_WIN_TOP_MARGIN_M = 0.15
+RESULT_WIZARD_WIN_WIDTH_M   = 1.0
+RESULT_WIZARD_WIN_TOP_MARGIN_M = 0.15
+RESULT_FIGHTER_WIN_WIDTH_M  = 1.0
+RESULT_FIGHTER_WIN_TOP_MARGIN_M = 0.15
+
 # 勝利ボイス（bunny_win_<番号>.mp3）ごとに対応する勝利メッセージ本文。
 # リザルト開始時にボイスをランダム選択し、対応するメッセージを表示する
 RESULT_VICTORY_MESSAGES = {
@@ -117,6 +127,11 @@ RESULT_WARRIOR_VICTORY_MESSAGES = {
     0: '家に帰って、シコってろ！',
     1: 'もうイっちゃったのかぁ？',
 }
+# 新キャラがトドメを刺した場合の勝利メッセージ（ダミー。ボイスは未用意のため空dictで対応）
+RESULT_SISTER_VICTORY_MESSAGES   = {0: 'ダミー'}
+RESULT_KUNOICHI_VICTORY_MESSAGES = {0: 'ダミー'}
+RESULT_WIZARD_VICTORY_MESSAGES   = {0: 'ダミー'}
+RESULT_FIGHTER_VICTORY_MESSAGES  = {0: 'ダミー'}
 VOICE_WIN_SPEED = 1.5  # 勝利ボイスの再生速度倍率（候補とも一律。この倍率に合わせて勝利メッセージの表示速度も変化する）
 # 再生速度変更時のピッチ維持（OLA法による時間伸縮）パラメータ
 VOICE_TIME_STRETCH_FRAME_SIZE = 1024  # 解析フレーム長（サンプル数）。大きいほど低音域の質が安定するが処理が重くなる
@@ -217,6 +232,12 @@ SAMURAI_MENU_INDEX_SHINGANKEN = 0
 WARRIOR_MENU_OPTIONS = ["斧"]
 WARRIOR_MENU_INDEX_AXE = 0
 
+# シスター・くノ一・魔法使い・武道家の行動選択肢（いずれも全てヒロインのムチと同じ挙動）
+SISTER_MENU_OPTIONS   = ["ツララ落とし", "生命の雫"]
+KUNOICHI_MENU_OPTIONS = ["手裏剣", "華火"]
+WIZARD_MENU_OPTIONS   = ["火炎放射", "火竜変化"]
+FIGHTER_MENU_OPTIONS  = ["拳脚", "百裂拳"]
+
 # 攻撃手段ごとの攻撃ボイス再生候補：bunny_attack_<番号>.mp3 の番号で指定する（再生時にこの中からランダムに選ぶ）
 BATTLE_WHIP_ATTACK_VOICE_NUMBERS  = (1, 1)  # ムチ攻撃時に再生するボイス候補
 BATTLE_FLAME_ATTACK_VOICE_NUMBERS = (0, 0)  # 炎攻撃時に再生するボイス候補
@@ -273,10 +294,14 @@ BATTLE_ENEMY_ATTACK_TARGET_SCALE = 0.4      # 最接近時の敵の画像高さ�
 BATTLE_ENEMY_ATTACK_TARGET_GROUND_Y_OFFSET_RATIO = 0.0  # 最接近時の敵の足元位置：バトルウィンドウ下端からのオフセット（画面高さの何倍。0でウィンドウ下端と一致）
 
 # HP関連パラメータ：最大HPと、各攻撃手段で増減するダメージ量の範囲（ランダム抽選はrandom.randint(MIN, MAX)で行う）
-HEROINE_MAX_HP = 200   # ヒロインの最大HP（現在HPは戦闘をまたいで引き継ぐ。回復はしない）
-SAMURAI_MAX_HP = 150   # サムライの最大HP（現在HPは戦闘をまたいで引き継ぐ。回復はしない）
-WARRIOR_MAX_HP = 180   # 女戦士の最大HP（現在HPは戦闘をまたいで引き継ぐ。回復はしない）
-GOBLIN_MAX_HP  = 100    # ゴブリン1体の最大HP（敵はエンカウント毎に最大HPへリセットされる）
+HEROINE_MAX_HP  = 200   # ヒロインの最大HP（現在HPは戦闘をまたいで引き継ぐ。回復はしない）
+SAMURAI_MAX_HP  = 150   # サムライの最大HP
+WARRIOR_MAX_HP  = 180   # 女戦士の最大HP
+SISTER_MAX_HP   = 150   # シスターの最大HP
+KUNOICHI_MAX_HP = 130   # くノ一の最大HP
+WIZARD_MAX_HP   = 120   # 魔法使いの最大HP
+FIGHTER_MAX_HP  = 200   # 武道家の最大HP
+GOBLIN_MAX_HP   = 100   # ゴブリン1体の最大HP（敵はエンカウント毎に最大HPへリセットされる）
 
 BATTLE_WHIP_DAMAGE_MIN  = 20   # ムチで敵に与えるダメージの最小値
 BATTLE_WHIP_DAMAGE_MAX  = 50   # ムチで敵に与えるダメージの最大値
@@ -353,7 +378,8 @@ result_flashout_heroine_override = None  # フラッシュアウト中のヒロ�
 result_flashout_samurai_override = None  # フラッシュアウト中のサムライ表示位置・スケールの上書き指定（(x, 足元y, 画像高さ) または None）
 result_flashout_is_samurai = False  # フラッシュアウトでヒロインの代わりにサムライを表示するか（サムライがトドメを刺した場合）
 result_flashout_warrior_override = None  # フラッシュアウト中の女戦士表示位置・スケールの上書き指定（(x, 足元y, 画像高さ) または None）
-result_flashout_is_warrior = False  # フラッシュアウトでヒロインの代わりに女戦士を表示するか（女戦士がトドメを刺した場合）
+result_flashout_is_warrior = False  # フラッシュアウトでヒロインの代わりに女戦士（または新キャラ）を表示するか
+result_flashout_active_char = -1  # トドメを刺したキャラのID（-1=ヒロイン, -2=サムライ, -3=女戦士, -4〜-7=新キャラ）
 
 battle_menu_selected_index = 0
 battle_target_enemy_index  = 0  # ムチ選択中に左右キーで選べる攻撃対象（ENEMY_X_RATIOSのインデックス）
@@ -366,6 +392,16 @@ battle_samurai_target_enemy_index  = 0  # 剣選択中に左右キーで選べ�
 # 女戦士の行動選択（サムライの選択後に行う）
 battle_warrior_menu_selected_index = 0
 battle_warrior_target_enemy_index  = 0  # 斧選択中に左右キーで選べる攻撃対象（ENEMY_X_RATIOSのインデックス）
+
+# シスター・くノ一・魔法使い・武道家の行動選択
+battle_sister_menu_selected_index   = 0
+battle_sister_target_enemy_index    = 0
+battle_kunoichi_menu_selected_index = 0
+battle_kunoichi_target_enemy_index  = 0
+battle_wizard_menu_selected_index   = 0
+battle_wizard_target_enemy_index    = 0
+battle_fighter_menu_selected_index  = 0
+battle_fighter_target_enemy_index   = 0
 
 # AIユーザモード：ON時はコマンド選択・リザルト画面の進行を自動操作する（process_ai_battle_input()）
 ai_mode_active = True
@@ -390,11 +426,15 @@ ai_field_wait_frame = 0
 # AIユーザモード：ヒロインの行動選択 → マカダンスはそのバトル中1回のみ選択可能（使用済みなら以後は選択肢から除外する）
 heroine_macadance_used = False
 
-# HP：ヒロイン・サムライの現在HPは戦闘終了時に全回復する。敵の現在HPはエンカウント毎に最大HPへリセットされる
-heroine_hp = HEROINE_MAX_HP
-samurai_hp = SAMURAI_MAX_HP
-warrior_hp = WARRIOR_MAX_HP
-enemy_hp   = [GOBLIN_MAX_HP] * len(ENEMY_X_RATIOS)
+# HP：ヒロイン・サムライ他の現在HPは戦闘終了時に全回復する。敵の現在HPはエンカウント毎に最大HPへリセットされる
+heroine_hp  = HEROINE_MAX_HP
+samurai_hp  = SAMURAI_MAX_HP
+warrior_hp  = WARRIOR_MAX_HP
+sister_hp   = SISTER_MAX_HP
+kunoichi_hp = KUNOICHI_MAX_HP
+wizard_hp   = WIZARD_MAX_HP
+fighter_hp  = FIGHTER_MAX_HP
+enemy_hp    = [GOBLIN_MAX_HP] * len(ENEMY_X_RATIOS)
 
 # ダメージ表現アニメーション：HP更新時、見た目への反映を2段階に分けて行う
 # ①DAMAGE_FLASH_FRAMES：表示HPは更新前のまま、更新前→更新後の差分範囲を白く点滅させる
@@ -426,6 +466,22 @@ warrior_damage_anim_old_hp = WARRIOR_MAX_HP
 warrior_damage_anim_new_hp = WARRIOR_MAX_HP
 warrior_damage_anim_frame  = DAMAGE_ANIM_DONE_FRAME
 warrior_damage_anim_flash_color = DAMAGE_FLASH_COLOR_ENEMY_ATTACK
+sister_damage_anim_old_hp   = SISTER_MAX_HP
+sister_damage_anim_new_hp   = SISTER_MAX_HP
+sister_damage_anim_frame    = DAMAGE_ANIM_DONE_FRAME
+sister_damage_anim_flash_color = DAMAGE_FLASH_COLOR_ENEMY_ATTACK
+kunoichi_damage_anim_old_hp = KUNOICHI_MAX_HP
+kunoichi_damage_anim_new_hp = KUNOICHI_MAX_HP
+kunoichi_damage_anim_frame  = DAMAGE_ANIM_DONE_FRAME
+kunoichi_damage_anim_flash_color = DAMAGE_FLASH_COLOR_ENEMY_ATTACK
+wizard_damage_anim_old_hp   = WIZARD_MAX_HP
+wizard_damage_anim_new_hp   = WIZARD_MAX_HP
+wizard_damage_anim_frame    = DAMAGE_ANIM_DONE_FRAME
+wizard_damage_anim_flash_color = DAMAGE_FLASH_COLOR_ENEMY_ATTACK
+fighter_damage_anim_old_hp  = FIGHTER_MAX_HP
+fighter_damage_anim_new_hp  = FIGHTER_MAX_HP
+fighter_damage_anim_frame   = DAMAGE_ANIM_DONE_FRAME
+fighter_damage_anim_flash_color = DAMAGE_FLASH_COLOR_ENEMY_ATTACK
 enemy_damage_anim_old_hp = [GOBLIN_MAX_HP] * len(ENEMY_X_RATIOS)
 enemy_damage_anim_new_hp = [GOBLIN_MAX_HP] * len(ENEMY_X_RATIOS)
 enemy_damage_anim_frame  = [DAMAGE_ANIM_DONE_FRAME] * len(ENEMY_X_RATIOS)
@@ -437,25 +493,31 @@ battle_annihilate_targets = []  # 殲滅演出（アルファ値を下げて消�
 battle_annihilate_frame   = 0   # 殲滅演出の経過フレーム数（共通カウンタ）
 
 # 戦闘内ステート：ヒロイン・サムライ・女戦士の行動選択（順序はbattle_command_phase_order参照） → 攻防演出
-BATTLE_PHASE_COMMAND_HEROINE = 0  # ヒロインの行動選択中（コマンドウィンドウ表示）
-BATTLE_PHASE_COMMAND_SAMURAI = 1  # サムライの行動選択中（コマンドウィンドウ表示。Spaceで1つ前の選択へ戻れる）
-BATTLE_PHASE_COMMAND_WARRIOR = 2  # 女戦士の行動選択中（コマンドウィンドウ表示。Spaceで1つ前の選択へ戻れる）
-BATTLE_PHASE_EXCHANGE        = 3  # 攻防演出中（コマンドウィンドウ非表示）
+BATTLE_PHASE_COMMAND_HEROINE  = 0  # ヒロインの行動選択中（コマンドウィンドウ表示）
+BATTLE_PHASE_COMMAND_SAMURAI  = 1  # サムライの行動選択中（コマンドウィンドウ表示。Spaceで1つ前の選択へ戻れる）
+BATTLE_PHASE_COMMAND_WARRIOR  = 2  # 女戦士の行動選択中（コマンドウィンドウ表示。Spaceで1つ前の選択へ戻れる）
+BATTLE_PHASE_COMMAND_SISTER   = 3  # シスターの行動選択中
+BATTLE_PHASE_COMMAND_KUNOICHI = 4  # くノ一の行動選択中
+BATTLE_PHASE_COMMAND_WIZARD   = 5  # 魔法使いの行動選択中
+BATTLE_PHASE_COMMAND_FIGHTER  = 6  # 武道家の行動選択中
+BATTLE_PHASE_EXCHANGE         = 7  # 攻防演出中（コマンドウィンドウ非表示）
 battle_phase = BATTLE_PHASE_COMMAND_HEROINE
 battle_exchange_frame = 0
 
 # 行動選択順の基本サイクル：エンカウント時の注視キャラに応じて、この並びを回転させたものが
 # battle_command_phase_order になる（例：女戦士注視→女戦士,ヒロイン,サムライ／ヒロイン注視→ヒロイン,サムライ,女戦士）
-BATTLE_COMMAND_PHASE_CYCLE = [BATTLE_PHASE_COMMAND_HEROINE, BATTLE_PHASE_COMMAND_SAMURAI, BATTLE_PHASE_COMMAND_WARRIOR]
-BATTLE_FOCUS_CHARACTER_TO_COMMAND_PHASE = {-1: BATTLE_PHASE_COMMAND_HEROINE, -2: BATTLE_PHASE_COMMAND_SAMURAI, -3: BATTLE_PHASE_COMMAND_WARRIOR}
-BATTLE_COMMAND_PHASE_TO_CHARACTER = {BATTLE_PHASE_COMMAND_HEROINE: -1, BATTLE_PHASE_COMMAND_SAMURAI: -2, BATTLE_PHASE_COMMAND_WARRIOR: -3}
+BATTLE_COMMAND_PHASE_CYCLE = [BATTLE_PHASE_COMMAND_HEROINE, BATTLE_PHASE_COMMAND_SAMURAI, BATTLE_PHASE_COMMAND_WARRIOR, BATTLE_PHASE_COMMAND_SISTER, BATTLE_PHASE_COMMAND_KUNOICHI, BATTLE_PHASE_COMMAND_WIZARD, BATTLE_PHASE_COMMAND_FIGHTER]
+BATTLE_FOCUS_CHARACTER_TO_COMMAND_PHASE = {-1: BATTLE_PHASE_COMMAND_HEROINE, -2: BATTLE_PHASE_COMMAND_SAMURAI, -3: BATTLE_PHASE_COMMAND_WARRIOR, -4: BATTLE_PHASE_COMMAND_SISTER, -5: BATTLE_PHASE_COMMAND_KUNOICHI, -6: BATTLE_PHASE_COMMAND_WIZARD, -7: BATTLE_PHASE_COMMAND_FIGHTER}
+BATTLE_COMMAND_PHASE_TO_CHARACTER = {BATTLE_PHASE_COMMAND_HEROINE: -1, BATTLE_PHASE_COMMAND_SAMURAI: -2, BATTLE_PHASE_COMMAND_WARRIOR: -3, BATTLE_PHASE_COMMAND_SISTER: -4, BATTLE_PHASE_COMMAND_KUNOICHI: -5, BATTLE_PHASE_COMMAND_WIZARD: -6, BATTLE_PHASE_COMMAND_FIGHTER: -7}
 battle_command_phase_order = list(BATTLE_COMMAND_PHASE_CYCLE)  # start_battle()でbattle_focus_characterに応じて再計算する
 
 # バトル参加キャラクターのワールド座標系での基準位置（メートル）。左から右へ
-# 「行動選択順3番目, 1番目（中央・注視キャラ）, 2番目」の並びとなるよう、
+# 「注視キャラ（中央）, その後の順に右へ3人, 巡回して左へ3人」の並びとなるよう、
 # start_battle()でbattle_command_phase_orderに応じて再計算する
-BATTLE_ORDER_POSITION_OFFSET_M = {0: 0.0, 1: 1.2, 2: -1.2}  # 選択順インデックス(0=1番目,1=2番目,2=3番目)ごとのオフセット(m)
-battle_character_world_offset_m = {-1: 0.0, -2: 1.0, -3: -1.0}
+# order_index 0=注視キャラ(0.0m), 1=次→右(+0.5m), 2=次々→右(+1.0m), 3=右端(+1.5m),
+#              4=左端(-1.5m), 5=左から2番目(-1.0m), 6=中央左隣(-0.5m)
+BATTLE_ORDER_POSITION_OFFSET_M = {0: 0.0, 1: 0.5, 2: 1.0, 3: 1.5, 4: -1.5, 5: -1.0, 6: -0.5}
+battle_character_world_offset_m = {-1: 0.0, -2: 0.5, -3: 1.0, -4: 1.5, -5: -1.5, -6: -1.0, -7: -0.5}
 
 # ムチ（近接攻撃）演出ステート：接近 → ダメージ待機 → 白色点滅 → 後退
 BATTLE_WHIP_PHASE_APPROACH    = 0  # 敵に接近中
@@ -472,6 +534,16 @@ battle_samurai_whip_frame = 0
 # 女戦士の斧（近接攻撃）演出ステート：ムチと同じ4ステートをそのまま流用する
 battle_warrior_whip_phase = BATTLE_WHIP_PHASE_APPROACH
 battle_warrior_whip_frame = 0
+
+# シスター・くノ一・魔法使い・武道家の攻撃演出ステート：いずれもムチと同じ4ステートを流用する
+battle_sister_whip_phase   = BATTLE_WHIP_PHASE_APPROACH
+battle_sister_whip_frame   = 0
+battle_kunoichi_whip_phase = BATTLE_WHIP_PHASE_APPROACH
+battle_kunoichi_whip_frame = 0
+battle_wizard_whip_phase   = BATTLE_WHIP_PHASE_APPROACH
+battle_wizard_whip_frame   = 0
+battle_fighter_whip_phase  = BATTLE_WHIP_PHASE_APPROACH
+battle_fighter_whip_frame  = 0
 
 # 炎（全体攻撃）演出ステート：その場で詠唱（待機） → 敵全体に同時に赤色点滅
 BATTLE_FLAME_PHASE_CAST  = 0  # 攻撃ボイス再生後、白色点滅開始までの待機中（その場にとどまる）
@@ -511,6 +583,16 @@ samurai_whip_trail_key = None
 # 女戦士の斧：接近・後退中の残像履歴（ヒロインのムチと同じ仕組み）
 warrior_whip_trail = []
 warrior_whip_trail_key = None
+
+# シスター・くノ一・魔法使い・武道家：接近・後退中の残像履歴
+sister_whip_trail   = []
+sister_whip_trail_key = None
+kunoichi_whip_trail = []
+kunoichi_whip_trail_key = None
+wizard_whip_trail   = []
+wizard_whip_trail_key = None
+fighter_whip_trail  = []
+fighter_whip_trail_key = None
 
 # サムライの刀による斬撃エフェクト：敵への接近完了直後から開始し、ダメージ表現アニメーションとは独立して進行する
 # （battle_slash_frame >= BATTLE_SLASH_TOTAL_FRAMES の間は非表示）
@@ -723,10 +805,14 @@ last_image = None
 
 battle_back_img     = None  # 後ろ姿画像（スケール後）
 battle_back_img_raw = None  # 後ろ姿画像（オリジナル）
-result_heroine_win_img = None  # 勝利バストショット画像（bunny_walk_0.pngをHEROINE_HEIGHT_M分の高さに一度だけスケール）
-result_samurai_win_img = None  # 勝利バストショット画像（サムライがトドメを刺した場合・samurai_front.pngをSAMURAI_HEIGHT_M分の高さに一度だけスケール）
-result_warrior_win_img = None  # 勝利バストショット画像（女戦士がトドメを刺した場合・warrior_front.pngをWARRIOR_HEIGHT_M分の高さに一度だけスケール）
-result_active_win_img = None  # リザルト開始時に選ばれた、実際に表示する勝利バストショット画像
+result_heroine_win_img  = None  # 勝利バストショット画像（bunny_front.pngをHEROINE_HEIGHT_M分の高さに一度だけスケール）
+result_samurai_win_img  = None  # 勝利バストショット画像（サムライがトドメを刺した場合）
+result_warrior_win_img  = None  # 勝利バストショット画像（女戦士がトドメを刺した場合）
+result_sister_win_img   = None  # 勝利バストショット画像（シスターがトドメを刺した場合）
+result_kunoichi_win_img = None  # 勝利バストショット画像（くノ一がトドメを刺した場合）
+result_wizard_win_img   = None  # 勝利バストショット画像（魔法使いがトドメを刺した場合）
+result_fighter_win_img  = None  # 勝利バストショット画像（武道家がトドメを刺した場合）
+result_active_win_img   = None  # リザルト開始時に選ばれた、実際に表示する勝利バストショット画像
 enemy_img_raw       = None  # 敵（goblin）画像（オリジナル）
 heroine_front_img_raw = None  # ヒロイン前姿画像（オリジナル） — ステータスウィンドウ用
 samurai_front_img_raw = None  # サムライ前姿画像（オリジナル） — ステータスウィンドウ用
@@ -747,15 +833,23 @@ hp_grayscale_full_cache = {}  # 画像全体をグレースケール化＋暗く
 HP_GRAYSCALE_CACHE_MAX_ENTRIES = 64  # hp_grayscale_cacheの最大保持数。ダメージ表現アニメーションで遷移中の中間HP値が次々キャッシュされ肥大化するのを防ぐ
 dance_images_raw    = []  # マカダンス演出用画像（bunny_dance_0_<番号>.png を番号順に並べたリスト。スケールは描画時に行う）
 voice_win_by_number = {}  # 勝利ボイス（{番号: Sound}。bunny_win_<番号>.mp3 の番号をキーとし、リザルト開始時にランダム選択する）
-voice_samurai_win_by_number = {}  # 勝利ボイス（サムライがトドメを刺した場合）（{番号: Sound}。samurai_win_<番号>.mp3）
-voice_warrior_win_by_number = {}  # 勝利ボイス（女戦士がトドメを刺した場合）（{番号: Sound}。warrior_win_<番号>.mp3）
+voice_samurai_win_by_number  = {}  # 勝利ボイス（サムライがトドメを刺した場合）
+voice_warrior_win_by_number  = {}  # 勝利ボイス（女戦士がトドメを刺した場合）
+voice_sister_win_by_number   = {}  # 勝利ボイス（シスターがトドメを刺した場合・ファイルが存在しない場合は空dict）
+voice_kunoichi_win_by_number = {}  # 勝利ボイス（くノ一がトドメを刺した場合）
+voice_wizard_win_by_number   = {}  # 勝利ボイス（魔法使いがトドメを刺した場合）
+voice_fighter_win_by_number  = {}  # 勝利ボイス（武道家がトドメを刺した場合）
 result_win_voice         = None  # リザルト開始時に選ばれた勝利ボイス（再生・長さ判定用）
 result_victory_message        = ''  # 選ばれた勝利ボイスに対応する勝利メッセージ本文
 result_message_complete_frame = 0  # 勝利メッセージが全文表示し終わるフレーム（= 最後の文字が追加される瞬間）
 result_win_bgm_start_frame    = 0  # 勝利BGMの再生を開始するフレーム（= メッセージ表示完了から指定フレーム経過した瞬間）
 voice_battle_start_list = []  # エンカウント時かけ声候補（bunny_battle_start_<番号>.mp3 を全て読み込み、再生時にランダム選択する）
 voice_samurai_battle_start_list = []  # エンカウント時（サムライ注視）かけ声候補（samurai_battle_start_<番号>.mp3 を全て読み込み、再生時にランダム選択する）
-voice_warrior_battle_start_list = []  # エンカウント時（女戦士注視）かけ声候補（warrior_battle_start.mp3 等を全て読み込み、再生時にランダム選択する）
+voice_warrior_battle_start_list  = []  # エンカウント時（女戦士注視）かけ声候補
+voice_sister_battle_start_list   = []  # エンカウント時（シスター注視）かけ声候補（ファイルが存在しない場合は空list）
+voice_kunoichi_battle_start_list = []  # エンカウント時（くノ一注視）かけ声候補
+voice_wizard_battle_start_list   = []  # エンカウント時（魔法使い注視）かけ声候補
+voice_fighter_battle_start_list  = []  # エンカウント時（武道家注視）かけ声候補
 voice_samurai_attack_list = []  # サムライ攻撃時のかけ声候補（samurai_attack_start_<番号>.mp3 を全て読み込み、再生時にランダム選択する）
 voice_warrior_attack_list = []  # 女戦士攻撃時のかけ声候補（warrior_attack_<番号>.mp3 を全て読み込み、再生時にランダム選択する）
 voice_attack_by_number = {}  # 攻撃ボイス（{番号: Sound}。bunny_attack_<番号>.mp3 の番号をキーとし、攻撃手段ごとに候補番号を選んで再生する）
@@ -1089,6 +1183,36 @@ def play_warrior_attack_voice():
     if voice_warrior_attack_list:
         random.choice(voice_warrior_attack_list).play()
 
+
+def _load_win_voices_for(char_prefix):
+    """<char_prefix>_win_<番号>.mp3 を全て検出して {番号: Sound} 辞書で返す（ファイルなし→空dict）"""
+    files = [f for f in os.listdir(VOICES_DIR)
+             if f.lower().endswith(".mp3") and f.startswith(char_prefix + "_win_")]
+    voices_by_number = {}
+    for fname in files:
+        num = int(os.path.splitext(fname)[0].split("_")[-1])
+        voice = load_sound_at_speed(os.path.join(VOICES_DIR, fname), VOICE_WIN_SPEED)
+        voice.set_volume(VOICE_WIN_VOLUME)
+        voices_by_number[num] = voice
+    return voices_by_number
+
+
+def _load_battle_start_voices_for(char_prefix, volume):
+    """<char_prefix>_battle_start*.mp3 を全て検出してSoundリストで返す（ファイルなし→空list）"""
+    files = [f for f in os.listdir(VOICES_DIR)
+             if f.lower().endswith(".mp3") and f.startswith(char_prefix + "_battle_start")]
+    voices = []
+    for fname in files:
+        voice = load_sound_at_speed(os.path.join(VOICES_DIR, fname), VOICE_BATTLE_START_SPEED)
+        voice.set_volume(volume)
+        voices.append(voice)
+    return voices
+
+
+def _play_battle_start_voice_from(lst):
+    if lst:
+        random.choice(lst).play()
+
 # ---------------------------------------------------------
 # load_attack_voices()：bunny_attack_<番号>.mp3 を全て検出して読み込み、
 #                       再生速度変更後のSoundを {番号: Sound} の辞書として返す
@@ -1141,6 +1265,10 @@ def start_battle_turn():
     global battle_whip_phase, battle_whip_frame
     global battle_samurai_whip_phase, battle_samurai_whip_frame
     global battle_warrior_whip_phase, battle_warrior_whip_frame
+    global battle_sister_whip_phase, battle_sister_whip_frame
+    global battle_kunoichi_whip_phase, battle_kunoichi_whip_frame
+    global battle_wizard_whip_phase, battle_wizard_whip_frame
+    global battle_fighter_whip_phase, battle_fighter_whip_frame
     global battle_flame_phase, battle_flame_frame
     global battle_dance_phase, battle_dance_frame
     global battle_enemy_attack_phase, battle_enemy_attack_frame, battle_attacking_enemy_index
@@ -1187,12 +1315,28 @@ def start_battle_turn():
         battle_warrior_whip_phase = BATTLE_WHIP_PHASE_APPROACH
         battle_warrior_whip_frame = 0
         play_warrior_attack_voice()
+    elif attacker == -4:
+        battle_attacking_enemy_index = -1
+        battle_sister_whip_phase = BATTLE_WHIP_PHASE_APPROACH
+        battle_sister_whip_frame = 0
+    elif attacker == -5:
+        battle_attacking_enemy_index = -1
+        battle_kunoichi_whip_phase = BATTLE_WHIP_PHASE_APPROACH
+        battle_kunoichi_whip_frame = 0
+    elif attacker == -6:
+        battle_attacking_enemy_index = -1
+        battle_wizard_whip_phase = BATTLE_WHIP_PHASE_APPROACH
+        battle_wizard_whip_frame = 0
+    elif attacker == -7:
+        battle_attacking_enemy_index = -1
+        battle_fighter_whip_phase = BATTLE_WHIP_PHASE_APPROACH
+        battle_fighter_whip_frame = 0
     else:
         battle_attacking_enemy_index = attacker
         battle_enemy_attack_phase = BATTLE_WHIP_PHASE_APPROACH
         battle_enemy_attack_frame = 0
-        # 敵の攻撃対象：ヒロイン／サムライ／女戦士をランダムに決定する
-        battle_enemy_attack_target = random.choice([-1, -2, -3])
+        # 敵の攻撃対象：全7仲間キャラからランダムに決定する
+        battle_enemy_attack_target = random.choice([-1, -2, -3, -4, -5, -6, -7])
 
 # ---------------------------------------------------------
 # advance_battle_turn()：現在の番の演出が完了したあと、次の番へ進める
@@ -1203,10 +1347,16 @@ def advance_battle_turn():
     global battle_whip_phase, battle_whip_frame
     global battle_samurai_whip_phase, battle_samurai_whip_frame
     global battle_warrior_whip_phase, battle_warrior_whip_frame
+    global battle_sister_whip_phase, battle_sister_whip_frame
+    global battle_kunoichi_whip_phase, battle_kunoichi_whip_frame
+    global battle_wizard_whip_phase, battle_wizard_whip_frame
+    global battle_fighter_whip_phase, battle_fighter_whip_frame
     global battle_flame_phase, battle_flame_frame
     global battle_dance_phase, battle_dance_frame
     global battle_attacking_enemy_index
     global battle_target_enemy_index, battle_samurai_target_enemy_index, battle_warrior_target_enemy_index
+    global battle_sister_target_enemy_index, battle_kunoichi_target_enemy_index
+    global battle_wizard_target_enemy_index, battle_fighter_target_enemy_index
 
     battle_attacking_enemy_index = -1
 
@@ -1216,8 +1366,7 @@ def advance_battle_turn():
         if attacker >= 0 and enemy_defeated[attacker]:
             battle_turn_index += 1
             continue
-        # 攻撃対象がもう一方の仲間に既に倒されている場合：見えない敵への攻撃になってしまうため、
-        # 何もせず（接近・攻撃演出を行わず）この番をスキップする
+        # 攻撃対象が既に倒されている場合：この番をスキップする
         if (attacker == -1 and battle_menu_selected_index == BATTLE_MENU_INDEX_WHIP
                 and enemy_defeated[battle_target_enemy_index]):
             battle_turn_index += 1
@@ -1228,17 +1377,36 @@ def advance_battle_turn():
         if attacker == -3 and enemy_defeated[battle_warrior_target_enemy_index]:
             battle_turn_index += 1
             continue
+        if attacker == -4 and enemy_defeated[battle_sister_target_enemy_index]:
+            battle_turn_index += 1
+            continue
+        if attacker == -5 and enemy_defeated[battle_kunoichi_target_enemy_index]:
+            battle_turn_index += 1
+            continue
+        if attacker == -6 and enemy_defeated[battle_wizard_target_enemy_index]:
+            battle_turn_index += 1
+            continue
+        if attacker == -7 and enemy_defeated[battle_fighter_target_enemy_index]:
+            battle_turn_index += 1
+            continue
         break
 
     if battle_turn_index >= len(battle_turn_order):
         # 攻撃対象が撃破済みのまま残っている場合は、生存中の敵のいずれかへ向け直す
-        # （前回選択の名残でカーソルが敵のいない空間を指したままになるのを防ぐ）
         if enemy_defeated[battle_target_enemy_index]:
             battle_target_enemy_index = find_alive_enemy_index(battle_target_enemy_index, 1)
         if enemy_defeated[battle_samurai_target_enemy_index]:
             battle_samurai_target_enemy_index = find_alive_enemy_index(battle_samurai_target_enemy_index, 1)
         if enemy_defeated[battle_warrior_target_enemy_index]:
             battle_warrior_target_enemy_index = find_alive_enemy_index(battle_warrior_target_enemy_index, 1)
+        if enemy_defeated[battle_sister_target_enemy_index]:
+            battle_sister_target_enemy_index = find_alive_enemy_index(battle_sister_target_enemy_index, 1)
+        if enemy_defeated[battle_kunoichi_target_enemy_index]:
+            battle_kunoichi_target_enemy_index = find_alive_enemy_index(battle_kunoichi_target_enemy_index, 1)
+        if enemy_defeated[battle_wizard_target_enemy_index]:
+            battle_wizard_target_enemy_index = find_alive_enemy_index(battle_wizard_target_enemy_index, 1)
+        if enemy_defeated[battle_fighter_target_enemy_index]:
+            battle_fighter_target_enemy_index = find_alive_enemy_index(battle_fighter_target_enemy_index, 1)
 
         battle_phase = battle_first_command_phase()
         battle_whip_phase = BATTLE_WHIP_PHASE_APPROACH
@@ -1247,6 +1415,14 @@ def advance_battle_turn():
         battle_samurai_whip_frame = 0
         battle_warrior_whip_phase = BATTLE_WHIP_PHASE_APPROACH
         battle_warrior_whip_frame = 0
+        battle_sister_whip_phase = BATTLE_WHIP_PHASE_APPROACH
+        battle_sister_whip_frame = 0
+        battle_kunoichi_whip_phase = BATTLE_WHIP_PHASE_APPROACH
+        battle_kunoichi_whip_frame = 0
+        battle_wizard_whip_phase = BATTLE_WHIP_PHASE_APPROACH
+        battle_wizard_whip_frame = 0
+        battle_fighter_whip_phase = BATTLE_WHIP_PHASE_APPROACH
+        battle_fighter_whip_frame = 0
         battle_flame_phase = BATTLE_FLAME_PHASE_CAST
         battle_flame_frame = 0
         battle_dance_phase = BATTLE_DANCE_PHASE_SINK
@@ -1260,6 +1436,8 @@ def advance_battle_turn():
 def initialize():
     global tile_map, walk_images, walk_image_filenames, last_image, battle_back_img, battle_back_img_raw
     global result_heroine_win_img, result_samurai_win_img, result_warrior_win_img, enemy_img_raw, dance_images_raw, voice_win_by_number, voice_samurai_win_by_number, voice_warrior_win_by_number
+    global result_sister_win_img, result_kunoichi_win_img, result_wizard_win_img, result_fighter_win_img
+    global voice_sister_win_by_number, voice_kunoichi_win_by_number, voice_wizard_win_by_number, voice_fighter_win_by_number
     global heroine_front_img_raw, samurai_front_img_raw, samurai_back_img_raw, character_art_top_height_m
     global warrior_front_img_raw, warrior_back_img_raw
     global sister_front_img_raw, sister_back_img_raw
@@ -1267,6 +1445,7 @@ def initialize():
     global wizard_front_img_raw, wizard_back_img_raw
     global fighter_front_img_raw, fighter_back_img_raw
     global voice_battle_start_list, voice_samurai_battle_start_list, voice_warrior_battle_start_list, voice_samurai_attack_list, voice_warrior_attack_list, voice_attack_by_number, voice_goblin_damaged, voice_heroine_damaged, voice_samurai_damaged, voice_warrior_damaged, voice_dance, voice_katana_slash
+    global voice_sister_battle_start_list, voice_kunoichi_battle_start_list, voice_wizard_battle_start_list, voice_fighter_battle_start_list
     global sound_battle2_bgm
     global voice_shinganken_0, voice_shinganken_1
     global player_world_x, player_world_y
@@ -1358,6 +1537,18 @@ def initialize():
     war_win_img_w = max(1, int(war_win_orig_w * war_win_img_h / war_win_orig_h))
     result_warrior_win_img = pygame.transform.smoothscale(warrior_front_img_raw, (war_win_img_w, war_win_img_h))
 
+    def _make_win_img(front_img_raw, height_m, win_width_m):
+        m2p = SCREEN_W / win_width_m
+        ow, oh = front_img_raw.get_size()
+        ih = max(1, int(height_m * m2p))
+        iw = max(1, int(ow * ih / oh))
+        return pygame.transform.smoothscale(front_img_raw, (iw, ih))
+
+    result_sister_win_img   = _make_win_img(sister_front_img_raw,   SISTER_HEIGHT_M,   RESULT_SISTER_WIN_WIDTH_M)
+    result_kunoichi_win_img = _make_win_img(kunoichi_front_img_raw, KUNOICHI_HEIGHT_M, RESULT_KUNOICHI_WIN_WIDTH_M)
+    result_wizard_win_img   = _make_win_img(wizard_front_img_raw,   WIZARD_HEIGHT_M,   RESULT_WIZARD_WIN_WIDTH_M)
+    result_fighter_win_img  = _make_win_img(fighter_front_img_raw,  FIGHTER_HEIGHT_M,  RESULT_FIGHTER_WIN_WIDTH_M)
+
     # ★ マカダンス演出用画像を読み込み（描画時にスケールするためオリジナルのまま保持）
     dance_images_raw = load_dance_images()
 
@@ -1365,13 +1556,20 @@ def initialize():
 
     voice_samurai_win_by_number = load_samurai_win_voices()
 
-    voice_warrior_win_by_number = load_warrior_win_voices()
+    voice_warrior_win_by_number  = load_warrior_win_voices()
+    voice_sister_win_by_number   = _load_win_voices_for("sister")
+    voice_kunoichi_win_by_number = _load_win_voices_for("kunoichi")
+    voice_wizard_win_by_number   = _load_win_voices_for("wizard")
+    voice_fighter_win_by_number  = _load_win_voices_for("fighter")
 
     voice_battle_start_list = load_battle_start_voices()
 
-    voice_samurai_battle_start_list = load_samurai_battle_start_voices()
-
-    voice_warrior_battle_start_list = load_warrior_battle_start_voices()
+    voice_samurai_battle_start_list  = load_samurai_battle_start_voices()
+    voice_warrior_battle_start_list  = load_warrior_battle_start_voices()
+    voice_sister_battle_start_list   = _load_battle_start_voices_for("sister",   VOICE_WARRIOR_BATTLE_START_VOLUME)
+    voice_kunoichi_battle_start_list = _load_battle_start_voices_for("kunoichi", VOICE_WARRIOR_BATTLE_START_VOLUME)
+    voice_wizard_battle_start_list   = _load_battle_start_voices_for("wizard",   VOICE_WARRIOR_BATTLE_START_VOLUME)
+    voice_fighter_battle_start_list  = _load_battle_start_voices_for("fighter",  VOICE_WARRIOR_BATTLE_START_VOLUME)
 
     voice_samurai_attack_list = load_samurai_attack_voices()
 
@@ -1424,25 +1622,35 @@ def get_samurai_base_position():
 # ---------------------------------------------------------
 # enter_result_state()：バトルからリザルトへ遷移する
 # ---------------------------------------------------------
-def enter_result_state(heroine_override=None, samurai_finish=False, samurai_override=None, warrior_finish=False, warrior_override=None):
+def enter_result_state(heroine_override=None,
+                       samurai_finish=False, samurai_override=None,
+                       warrior_finish=False, warrior_override=None,
+                       sister_finish=False, sister_override=None,
+                       kunoichi_finish=False, kunoichi_override=None,
+                       wizard_finish=False, wizard_override=None,
+                       fighter_finish=False, fighter_override=None):
     global game_state
     global battle_flashout_frame, result_white_delay_frame, result_slidein_frame
     global result_text_delay_frame, result_text_frame
     global result_flashout_heroine_override, result_flashout_samurai_override, result_flashout_is_samurai
-    global result_flashout_warrior_override, result_flashout_is_warrior
+    global result_flashout_warrior_override, result_flashout_is_warrior, result_flashout_active_char
     global result_win_voice, result_active_win_img
     global result_victory_message, result_message_complete_frame, result_win_bgm_start_frame
-    global heroine_hp, samurai_hp, warrior_hp
+    global heroine_hp, samurai_hp, warrior_hp, sister_hp, kunoichi_hp, wizard_hp, fighter_hp
     global heroine_damage_anim_old_hp, heroine_damage_anim_new_hp, heroine_damage_anim_frame
     global samurai_damage_anim_old_hp, samurai_damage_anim_new_hp, samurai_damage_anim_frame
     global warrior_damage_anim_old_hp, warrior_damage_anim_new_hp, warrior_damage_anim_frame
+    global sister_damage_anim_old_hp, sister_damage_anim_new_hp, sister_damage_anim_frame
+    global kunoichi_damage_anim_old_hp, kunoichi_damage_anim_new_hp, kunoichi_damage_anim_frame
+    global wizard_damage_anim_old_hp, wizard_damage_anim_new_hp, wizard_damage_anim_frame
+    global fighter_damage_anim_old_hp, fighter_damage_anim_new_hp, fighter_damage_anim_frame
 
     game_state = STATE_RESULT
 
     # ★ 決着の瞬間：戦闘曲（battle2.mp3）を即停止する
     sound_battle2_bgm.stop()
 
-    # ★ 戦闘終了時にヒロイン・サムライ・女戦士のHPを全回復する（ダメージ表現アニメーションの状態も合わせてリセットする）
+    # ★ 戦闘終了時にHP全回復（ダメージアニメ状態もリセット）
     heroine_hp = HEROINE_MAX_HP
     heroine_damage_anim_old_hp = HEROINE_MAX_HP
     heroine_damage_anim_new_hp = HEROINE_MAX_HP
@@ -1455,6 +1663,22 @@ def enter_result_state(heroine_override=None, samurai_finish=False, samurai_over
     warrior_damage_anim_old_hp = WARRIOR_MAX_HP
     warrior_damage_anim_new_hp = WARRIOR_MAX_HP
     warrior_damage_anim_frame  = DAMAGE_ANIM_DONE_FRAME
+    sister_hp = SISTER_MAX_HP
+    sister_damage_anim_old_hp = SISTER_MAX_HP
+    sister_damage_anim_new_hp = SISTER_MAX_HP
+    sister_damage_anim_frame  = DAMAGE_ANIM_DONE_FRAME
+    kunoichi_hp = KUNOICHI_MAX_HP
+    kunoichi_damage_anim_old_hp = KUNOICHI_MAX_HP
+    kunoichi_damage_anim_new_hp = KUNOICHI_MAX_HP
+    kunoichi_damage_anim_frame  = DAMAGE_ANIM_DONE_FRAME
+    wizard_hp = WIZARD_MAX_HP
+    wizard_damage_anim_old_hp = WIZARD_MAX_HP
+    wizard_damage_anim_new_hp = WIZARD_MAX_HP
+    wizard_damage_anim_frame  = DAMAGE_ANIM_DONE_FRAME
+    fighter_hp = FIGHTER_MAX_HP
+    fighter_damage_anim_old_hp = FIGHTER_MAX_HP
+    fighter_damage_anim_new_hp = FIGHTER_MAX_HP
+    fighter_damage_anim_frame  = DAMAGE_ANIM_DONE_FRAME
 
     battle_flashout_frame    = 0
     result_white_delay_frame = 0
@@ -1466,28 +1690,52 @@ def enter_result_state(heroine_override=None, samurai_finish=False, samurai_over
     result_flashout_heroine_override = heroine_override
     result_flashout_samurai_override = samurai_override
     result_flashout_warrior_override = warrior_override
-    # フラッシュアウトで表示するキャラ：サムライ／女戦士がトドメを刺した場合はヒロインの代わりに表示する
+    # フラッシュアウトで表示するキャラ：サムライ／女戦士以外がトドメを刺した場合もヒロインの代わりに表示する
     result_flashout_is_samurai = samurai_finish
-    result_flashout_is_warrior = warrior_finish
-
-    # 勝利ボイスを候補からランダムに選び、対応する勝利メッセージ・バストショット画像・タイミング関連の値を算出する
-    # （メッセージ文字数は候補ごとに異なるため、ここで毎回算出し直す）
-    # サムライ／女戦士がトドメを刺した場合は、ヒロインの代わりにそのキャラのバストショット・ボイス・メッセージを使う
-    if warrior_finish:
-        win_voice_number = random.choice(list(voice_warrior_win_by_number.keys()))
-        result_win_voice = voice_warrior_win_by_number[win_voice_number]
-        result_victory_message = RESULT_WARRIOR_VICTORY_MESSAGES.get(win_voice_number, '')
-        result_active_win_img = result_warrior_win_img
-    elif samurai_finish:
-        win_voice_number = random.choice(list(voice_samurai_win_by_number.keys()))
-        result_win_voice = voice_samurai_win_by_number[win_voice_number]
-        result_victory_message = RESULT_SAMURAI_VICTORY_MESSAGES.get(win_voice_number, '')
-        result_active_win_img = result_samurai_win_img
+    result_flashout_is_warrior = (warrior_finish or sister_finish or kunoichi_finish or wizard_finish or fighter_finish)
+    if samurai_finish:
+        result_flashout_active_char = -2
+    elif warrior_finish:
+        result_flashout_active_char = -3
+    elif sister_finish:
+        result_flashout_active_char = -4
+    elif kunoichi_finish:
+        result_flashout_active_char = -5
+    elif wizard_finish:
+        result_flashout_active_char = -6
+    elif fighter_finish:
+        result_flashout_active_char = -7
     else:
-        win_voice_number = random.choice(list(voice_win_by_number.keys()))
-        result_win_voice = voice_win_by_number[win_voice_number]
-        result_victory_message = RESULT_VICTORY_MESSAGES.get(win_voice_number, '')
-        result_active_win_img = result_heroine_win_img
+        result_flashout_active_char = -1
+
+    def _pick_voice_win(voice_dict, messages, img):
+        """voice_dictが空でない場合はランダムにボイスを選び、メッセージ・画像を設定する"""
+        if voice_dict:
+            n = random.choice(list(voice_dict.keys()))
+            return voice_dict[n], messages.get(n, ''), img
+        return None, messages.get(0, ''), img
+
+    if warrior_finish:
+        result_win_voice, result_victory_message, result_active_win_img = \
+            _pick_voice_win(voice_warrior_win_by_number, RESULT_WARRIOR_VICTORY_MESSAGES, result_warrior_win_img)
+    elif samurai_finish:
+        result_win_voice, result_victory_message, result_active_win_img = \
+            _pick_voice_win(voice_samurai_win_by_number, RESULT_SAMURAI_VICTORY_MESSAGES, result_samurai_win_img)
+    elif sister_finish:
+        result_win_voice, result_victory_message, result_active_win_img = \
+            _pick_voice_win(voice_sister_win_by_number, RESULT_SISTER_VICTORY_MESSAGES, result_sister_win_img)
+    elif kunoichi_finish:
+        result_win_voice, result_victory_message, result_active_win_img = \
+            _pick_voice_win(voice_kunoichi_win_by_number, RESULT_KUNOICHI_VICTORY_MESSAGES, result_kunoichi_win_img)
+    elif wizard_finish:
+        result_win_voice, result_victory_message, result_active_win_img = \
+            _pick_voice_win(voice_wizard_win_by_number, RESULT_WIZARD_VICTORY_MESSAGES, result_wizard_win_img)
+    elif fighter_finish:
+        result_win_voice, result_victory_message, result_active_win_img = \
+            _pick_voice_win(voice_fighter_win_by_number, RESULT_FIGHTER_VICTORY_MESSAGES, result_fighter_win_img)
+    else:
+        result_win_voice, result_victory_message, result_active_win_img = \
+            _pick_voice_win(voice_win_by_number, RESULT_VICTORY_MESSAGES, result_heroine_win_img)
     result_message_complete_frame = (len(result_victory_message) - 1) * RESULT_TEXT_FRAMES_PER_CHAR
     result_win_bgm_start_frame = result_message_complete_frame + RESULT_WIN_BGM_DELAY_FRAMES
 
@@ -1512,6 +1760,22 @@ def battle_third_command_phase():
     return battle_command_phase_order[2]
 
 
+def battle_fourth_command_phase():
+    return battle_command_phase_order[3]
+
+
+def battle_fifth_command_phase():
+    return battle_command_phase_order[4]
+
+
+def battle_sixth_command_phase():
+    return battle_command_phase_order[5]
+
+
+def battle_seventh_command_phase():
+    return battle_command_phase_order[6]
+
+
 # ---------------------------------------------------------
 # サムライの行動選択肢を返す（マカダンスでバフがかかる前は「刀」のみ、バフ後は「心眼剣」のみ）
 # ---------------------------------------------------------
@@ -1525,65 +1789,99 @@ def get_samurai_menu_options():
 def battle_menu_cursor_step(direction):
     # 行動メニューのカーソルを1段階動かす（direction: -1=上, +1=下）
     global battle_menu_selected_index, battle_samurai_menu_selected_index, battle_warrior_menu_selected_index
+    global battle_sister_menu_selected_index, battle_kunoichi_menu_selected_index
+    global battle_wizard_menu_selected_index, battle_fighter_menu_selected_index
     if battle_phase == BATTLE_PHASE_COMMAND_HEROINE:
         battle_menu_selected_index = (battle_menu_selected_index + direction) % len(BATTLE_MENU_OPTIONS)
     elif battle_phase == BATTLE_PHASE_COMMAND_SAMURAI:
         battle_samurai_menu_selected_index = (battle_samurai_menu_selected_index + direction) % len(get_samurai_menu_options())
     elif battle_phase == BATTLE_PHASE_COMMAND_WARRIOR:
         battle_warrior_menu_selected_index = (battle_warrior_menu_selected_index + direction) % len(WARRIOR_MENU_OPTIONS)
+    elif battle_phase == BATTLE_PHASE_COMMAND_SISTER:
+        battle_sister_menu_selected_index = (battle_sister_menu_selected_index + direction) % len(SISTER_MENU_OPTIONS)
+    elif battle_phase == BATTLE_PHASE_COMMAND_KUNOICHI:
+        battle_kunoichi_menu_selected_index = (battle_kunoichi_menu_selected_index + direction) % len(KUNOICHI_MENU_OPTIONS)
+    elif battle_phase == BATTLE_PHASE_COMMAND_WIZARD:
+        battle_wizard_menu_selected_index = (battle_wizard_menu_selected_index + direction) % len(WIZARD_MENU_OPTIONS)
+    elif battle_phase == BATTLE_PHASE_COMMAND_FIGHTER:
+        battle_fighter_menu_selected_index = (battle_fighter_menu_selected_index + direction) % len(FIGHTER_MENU_OPTIONS)
 
 
 def battle_target_cursor_step(direction):
     # 攻撃対象（敵）のカーソルを1段階動かす（direction: -1=左, +1=右。撃破済みの敵は選択をスキップする）
     global battle_target_enemy_index, battle_samurai_target_enemy_index, battle_warrior_target_enemy_index
+    global battle_sister_target_enemy_index, battle_kunoichi_target_enemy_index
+    global battle_wizard_target_enemy_index, battle_fighter_target_enemy_index
     if battle_phase == BATTLE_PHASE_COMMAND_HEROINE and battle_menu_selected_index == BATTLE_MENU_INDEX_WHIP:
         battle_target_enemy_index = find_alive_enemy_index(battle_target_enemy_index, direction)
     elif battle_phase == BATTLE_PHASE_COMMAND_SAMURAI and battle_samurai_menu_selected_index in (SAMURAI_MENU_INDEX_SWORD, SAMURAI_MENU_INDEX_SHINGANKEN):
         battle_samurai_target_enemy_index = find_alive_enemy_index(battle_samurai_target_enemy_index, direction)
     elif battle_phase == BATTLE_PHASE_COMMAND_WARRIOR and battle_warrior_menu_selected_index == WARRIOR_MENU_INDEX_AXE:
         battle_warrior_target_enemy_index = find_alive_enemy_index(battle_warrior_target_enemy_index, direction)
+    elif battle_phase == BATTLE_PHASE_COMMAND_SISTER:
+        battle_sister_target_enemy_index = find_alive_enemy_index(battle_sister_target_enemy_index, direction)
+    elif battle_phase == BATTLE_PHASE_COMMAND_KUNOICHI:
+        battle_kunoichi_target_enemy_index = find_alive_enemy_index(battle_kunoichi_target_enemy_index, direction)
+    elif battle_phase == BATTLE_PHASE_COMMAND_WIZARD:
+        battle_wizard_target_enemy_index = find_alive_enemy_index(battle_wizard_target_enemy_index, direction)
+    elif battle_phase == BATTLE_PHASE_COMMAND_FIGHTER:
+        battle_fighter_target_enemy_index = find_alive_enemy_index(battle_fighter_target_enemy_index, direction)
 
 
-def battle_command_confirm():
-    # 行動決定（Enterキー相当）：1番手の選択完了 → 2番手の選択完了 → 3番手の選択完了 → 攻防ステートへ遷移する
-    # （1～3番手の順序は battle_command_phase_order により決まる。エンカウント時の注視キャラに応じてstart_battle()で決定される）
-    global battle_phase, battle_exchange_frame
+def _init_command_phase(phase):
+    """指定フェーズのメニュー選択・ターゲットを初期化する（battle_command_confirm から呼ぶ）"""
     global battle_menu_selected_index, battle_target_enemy_index
     global battle_samurai_menu_selected_index, battle_samurai_target_enemy_index
     global battle_warrior_menu_selected_index, battle_warrior_target_enemy_index
+    global battle_sister_menu_selected_index, battle_sister_target_enemy_index
+    global battle_kunoichi_menu_selected_index, battle_kunoichi_target_enemy_index
+    global battle_wizard_menu_selected_index, battle_wizard_target_enemy_index
+    global battle_fighter_menu_selected_index, battle_fighter_target_enemy_index
+    first = find_alive_enemy_index(-1, 1)
+    if phase == BATTLE_PHASE_COMMAND_HEROINE:
+        battle_menu_selected_index = 0
+        battle_target_enemy_index = first
+    elif phase == BATTLE_PHASE_COMMAND_SAMURAI:
+        battle_samurai_menu_selected_index = 0
+        battle_samurai_target_enemy_index = first
+    elif phase == BATTLE_PHASE_COMMAND_WARRIOR:
+        battle_warrior_menu_selected_index = 0
+        battle_warrior_target_enemy_index = first
+    elif phase == BATTLE_PHASE_COMMAND_SISTER:
+        battle_sister_menu_selected_index = 0
+        battle_sister_target_enemy_index = first
+    elif phase == BATTLE_PHASE_COMMAND_KUNOICHI:
+        battle_kunoichi_menu_selected_index = 0
+        battle_kunoichi_target_enemy_index = first
+    elif phase == BATTLE_PHASE_COMMAND_WIZARD:
+        battle_wizard_menu_selected_index = 0
+        battle_wizard_target_enemy_index = first
+    elif phase == BATTLE_PHASE_COMMAND_FIGHTER:
+        battle_fighter_menu_selected_index = 0
+        battle_fighter_target_enemy_index = first
+
+
+def battle_command_confirm():
+    # 行動決定（Enterキー相当）：1番手→2番手→…→7番手の選択完了後、攻防ステートへ遷移する
+    global battle_phase, battle_exchange_frame
     global battle_turn_order, battle_turn_index
-    if battle_phase == battle_first_command_phase():
-        battle_phase = battle_second_command_phase()
-        if battle_phase == BATTLE_PHASE_COMMAND_SAMURAI:
-            battle_samurai_menu_selected_index = 0
-            battle_samurai_target_enemy_index  = find_alive_enemy_index(-1, 1)
-        elif battle_phase == BATTLE_PHASE_COMMAND_WARRIOR:
-            battle_warrior_menu_selected_index = 0
-            battle_warrior_target_enemy_index  = find_alive_enemy_index(-1, 1)
-        else:
-            battle_menu_selected_index = 0
-            battle_target_enemy_index  = find_alive_enemy_index(-1, 1)
-    elif battle_phase == battle_second_command_phase():
-        battle_phase = battle_third_command_phase()
-        if battle_phase == BATTLE_PHASE_COMMAND_SAMURAI:
-            battle_samurai_menu_selected_index = 0
-            battle_samurai_target_enemy_index  = find_alive_enemy_index(-1, 1)
-        elif battle_phase == BATTLE_PHASE_COMMAND_WARRIOR:
-            battle_warrior_menu_selected_index = 0
-            battle_warrior_target_enemy_index  = find_alive_enemy_index(-1, 1)
-        else:
-            battle_menu_selected_index = 0
-            battle_target_enemy_index  = find_alive_enemy_index(-1, 1)
-    elif battle_phase == battle_third_command_phase():
+    phase_fns = [battle_first_command_phase, battle_second_command_phase, battle_third_command_phase,
+                 battle_fourth_command_phase, battle_fifth_command_phase, battle_sixth_command_phase,
+                 battle_seventh_command_phase]
+    phases = [f() for f in phase_fns]
+    if battle_phase in phases[:6]:
+        idx = phases.index(battle_phase)
+        battle_phase = phases[idx + 1]
+        _init_command_phase(battle_phase)
+    elif battle_phase == phases[6]:
         battle_phase = BATTLE_PHASE_EXCHANGE
         battle_exchange_frame = 0
-        if battle_menu_selected_index in (BATTLE_MENU_INDEX_WHIP, BATTLE_MENU_INDEX_FLAME, BATTLE_MENU_INDEX_DANCE):
-            # 行動順を決定する：生存している敵全体・ヒロイン（-1）・サムライ（-2）・女戦士（-3）を含めてランダムにシャッフルする
-            alive_indices = [i for i in range(len(enemy_defeated)) if not enemy_defeated[i]]
-            battle_turn_order = [-1, -2, -3] + alive_indices
-            random.shuffle(battle_turn_order)
-            battle_turn_index = 0
-            start_battle_turn()
+        # 行動順を決定する：生存している敵全体・全7仲間キャラを含めてランダムにシャッフルする
+        alive_indices = [i for i in range(len(enemy_defeated)) if not enemy_defeated[i]]
+        battle_turn_order = [-1, -2, -3, -4, -5, -6, -7] + alive_indices
+        random.shuffle(battle_turn_order)
+        battle_turn_index = 0
+        start_battle_turn()
 
 
 def result_to_field():
@@ -1605,16 +1903,25 @@ def start_battle():
     global battle_menu_selected_index, battle_target_enemy_index, battle_target_cursor_frame
     global battle_samurai_menu_selected_index, battle_samurai_target_enemy_index
     global battle_warrior_menu_selected_index, battle_warrior_target_enemy_index
+    global battle_sister_menu_selected_index, battle_sister_target_enemy_index
+    global battle_kunoichi_menu_selected_index, battle_kunoichi_target_enemy_index
+    global battle_wizard_menu_selected_index, battle_wizard_target_enemy_index
+    global battle_fighter_menu_selected_index, battle_fighter_target_enemy_index
     global battle_phase, battle_exchange_frame
     global battle_whip_phase, battle_whip_frame
     global battle_samurai_whip_phase, battle_samurai_whip_frame
     global battle_warrior_whip_phase, battle_warrior_whip_frame
+    global battle_sister_whip_phase, battle_sister_whip_frame
+    global battle_kunoichi_whip_phase, battle_kunoichi_whip_frame
+    global battle_wizard_whip_phase, battle_wizard_whip_frame
+    global battle_fighter_whip_phase, battle_fighter_whip_frame
     global battle_flame_phase, battle_flame_frame
     global battle_dance_phase, battle_dance_frame
     global battle_turn_order, battle_turn_index
     global battle_enemy_attack_phase, battle_enemy_attack_frame, battle_attacking_enemy_index, battle_enemy_attack_target
     global enemy_defeated, enemy_hp, battle_annihilate_targets, battle_annihilate_frame
     global heroine_whip_trail_key, samurai_whip_trail_key, warrior_whip_trail_key
+    global sister_whip_trail_key, kunoichi_whip_trail_key, wizard_whip_trail_key, fighter_whip_trail_key
     global enemy_damage_anim_old_hp, enemy_damage_anim_new_hp, enemy_damage_anim_frame, enemy_damage_anim_flash_color
     global samurai_powered_up
     global heroine_macadance_used
@@ -1627,13 +1934,12 @@ def start_battle():
     heroine_zoomout_frame = 0
     heroine_idle_frame = 0
     heroine_idle_phase_offset = random.randint(0, BATTLE_HEROINE_IDLE_PERIOD_FRAMES - 1)
-    # ★ ズームアウトの注視先をランダムに決定する（-1=ヒロイン, -2=サムライ, -3=女戦士の足元に注視）
-    battle_focus_character = random.choice([-1, -2, -3])
-    # ★ 行動選択順は、注視キャラを先頭としてヒロイン→サムライ→女戦士の順を巡回させたものになる
+    # ★ ズームアウトの注視先を全7仲間キャラからランダムに決定する
+    battle_focus_character = random.choice([-1, -2, -3, -4, -5, -6, -7])
+    # ★ 行動選択順は、注視キャラを先頭として7キャラのサイクルを巡回させたものになる
     focus_command_phase = BATTLE_FOCUS_CHARACTER_TO_COMMAND_PHASE[battle_focus_character]
     start_idx = BATTLE_COMMAND_PHASE_CYCLE.index(focus_command_phase)
     battle_command_phase_order = BATTLE_COMMAND_PHASE_CYCLE[start_idx:] + BATTLE_COMMAND_PHASE_CYCLE[:start_idx]
-    # ★ 並び順（左から右）は「行動選択順3番目, 1番目（中央・注視キャラ）, 2番目」となる
     battle_character_world_offset_m = {
         BATTLE_COMMAND_PHASE_TO_CHARACTER[phase]: BATTLE_ORDER_POSITION_OFFSET_M[order_index]
         for order_index, phase in enumerate(battle_command_phase_order)
@@ -1650,10 +1956,18 @@ def start_battle():
     battle_menu_selected_index = 0
     battle_target_enemy_index  = 0
     battle_target_cursor_frame = 0
-    battle_samurai_menu_selected_index = 0
-    battle_samurai_target_enemy_index  = 0
-    battle_warrior_menu_selected_index = 0
-    battle_warrior_target_enemy_index  = 0
+    battle_samurai_menu_selected_index  = 0
+    battle_samurai_target_enemy_index   = 0
+    battle_warrior_menu_selected_index  = 0
+    battle_warrior_target_enemy_index   = 0
+    battle_sister_menu_selected_index   = 0
+    battle_sister_target_enemy_index    = 0
+    battle_kunoichi_menu_selected_index = 0
+    battle_kunoichi_target_enemy_index  = 0
+    battle_wizard_menu_selected_index   = 0
+    battle_wizard_target_enemy_index    = 0
+    battle_fighter_menu_selected_index  = 0
+    battle_fighter_target_enemy_index   = 0
     battle_phase = battle_command_phase_order[0]
     battle_exchange_frame = 0
     battle_whip_phase = BATTLE_WHIP_PHASE_APPROACH
@@ -1662,12 +1976,20 @@ def start_battle():
     battle_samurai_whip_frame = 0
     battle_warrior_whip_phase = BATTLE_WHIP_PHASE_APPROACH
     battle_warrior_whip_frame = 0
+    battle_sister_whip_phase = BATTLE_WHIP_PHASE_APPROACH
+    battle_sister_whip_frame = 0
+    battle_kunoichi_whip_phase = BATTLE_WHIP_PHASE_APPROACH
+    battle_kunoichi_whip_frame = 0
+    battle_wizard_whip_phase = BATTLE_WHIP_PHASE_APPROACH
+    battle_wizard_whip_frame = 0
+    battle_fighter_whip_phase = BATTLE_WHIP_PHASE_APPROACH
+    battle_fighter_whip_frame = 0
     battle_flame_phase = BATTLE_FLAME_PHASE_CAST
     battle_flame_frame = 0
     battle_dance_phase = BATTLE_DANCE_PHASE_SINK
     battle_dance_frame = 0
-    samurai_powered_up = False  # ★ マカダンスによるサムライの見た目強化は、バトルごとにリセットする
-    heroine_macadance_used = False  # ★ マカダンスはバトル中1回のみ使用可能とするため、バトルごとにリセットする
+    samurai_powered_up = False
+    heroine_macadance_used = False
     battle_turn_order = []
     battle_turn_index = 0
     battle_enemy_attack_phase = BATTLE_WHIP_PHASE_APPROACH
@@ -1689,6 +2011,14 @@ def start_battle():
     samurai_whip_trail_key = None
     warrior_whip_trail.clear()
     warrior_whip_trail_key = None
+    sister_whip_trail.clear()
+    sister_whip_trail_key = None
+    kunoichi_whip_trail.clear()
+    kunoichi_whip_trail_key = None
+    wizard_whip_trail.clear()
+    wizard_whip_trail_key = None
+    fighter_whip_trail.clear()
+    fighter_whip_trail_key = None
     battle_slash_frame = BATTLE_SLASH_TOTAL_FRAMES  # ★ 刀の斬撃エフェクトも、バトルごとに非表示状態へリセットする
     battle_slash_target_enemy_index = -1
     battle_shingan_frame = -1  # ★ 心眼剣の斬撃エフェクトも、バトルごとに非表示状態へリセットする
@@ -1754,7 +2084,10 @@ def process_ai_battle_input():
     if game_state != STATE_BATTLE or heroine_zoomout_frame < BATTLE_HEROINE_ZOOMOUT_FRAMES:
         return
 
-    if battle_phase not in (BATTLE_PHASE_COMMAND_HEROINE, BATTLE_PHASE_COMMAND_SAMURAI, BATTLE_PHASE_COMMAND_WARRIOR):
+    all_command_phases = (BATTLE_PHASE_COMMAND_HEROINE, BATTLE_PHASE_COMMAND_SAMURAI, BATTLE_PHASE_COMMAND_WARRIOR,
+                          BATTLE_PHASE_COMMAND_SISTER, BATTLE_PHASE_COMMAND_KUNOICHI,
+                          BATTLE_PHASE_COMMAND_WIZARD, BATTLE_PHASE_COMMAND_FIGHTER)
+    if battle_phase not in all_command_phases:
         ai_command_step = AI_COMMAND_STEP_DECIDE
         ai_command_wait_frame = 0
         return
@@ -1769,11 +2102,31 @@ def process_ai_battle_input():
         current_menu_index = battle_samurai_menu_selected_index
         target_selection_indices = (SAMURAI_MENU_INDEX_SWORD, SAMURAI_MENU_INDEX_SHINGANKEN)
         current_target_index = battle_samurai_target_enemy_index
-    else:  # BATTLE_PHASE_COMMAND_WARRIOR
+    elif battle_phase == BATTLE_PHASE_COMMAND_WARRIOR:
         menu_options = WARRIOR_MENU_OPTIONS
         current_menu_index = battle_warrior_menu_selected_index
         target_selection_indices = (WARRIOR_MENU_INDEX_AXE,)
         current_target_index = battle_warrior_target_enemy_index
+    elif battle_phase == BATTLE_PHASE_COMMAND_SISTER:
+        menu_options = SISTER_MENU_OPTIONS
+        current_menu_index = battle_sister_menu_selected_index
+        target_selection_indices = tuple(range(len(SISTER_MENU_OPTIONS)))
+        current_target_index = battle_sister_target_enemy_index
+    elif battle_phase == BATTLE_PHASE_COMMAND_KUNOICHI:
+        menu_options = KUNOICHI_MENU_OPTIONS
+        current_menu_index = battle_kunoichi_menu_selected_index
+        target_selection_indices = tuple(range(len(KUNOICHI_MENU_OPTIONS)))
+        current_target_index = battle_kunoichi_target_enemy_index
+    elif battle_phase == BATTLE_PHASE_COMMAND_WIZARD:
+        menu_options = WIZARD_MENU_OPTIONS
+        current_menu_index = battle_wizard_menu_selected_index
+        target_selection_indices = tuple(range(len(WIZARD_MENU_OPTIONS)))
+        current_target_index = battle_wizard_target_enemy_index
+    else:  # BATTLE_PHASE_COMMAND_FIGHTER
+        menu_options = FIGHTER_MENU_OPTIONS
+        current_menu_index = battle_fighter_menu_selected_index
+        target_selection_indices = tuple(range(len(FIGHTER_MENU_OPTIONS)))
+        current_target_index = battle_fighter_target_enemy_index
 
     if ai_command_step == AI_COMMAND_STEP_DECIDE:
         # 行動を完全ランダムに決定し、メニューカーソルを近い方向から目標位置へ合わせ始める
@@ -1897,14 +2250,17 @@ def process_input():
 
         # 攻撃選択サブウィンドウ：上下キーで選択位置を変更（ズームアウト完了後・コマンド選択中のみ。
         # システムポーズ中・AIユーザモード中は無効）
+        _all_cmd = (BATTLE_PHASE_COMMAND_HEROINE, BATTLE_PHASE_COMMAND_SAMURAI, BATTLE_PHASE_COMMAND_WARRIOR,
+                    BATTLE_PHASE_COMMAND_SISTER, BATTLE_PHASE_COMMAND_KUNOICHI,
+                    BATTLE_PHASE_COMMAND_WIZARD, BATTLE_PHASE_COMMAND_FIGHTER)
         if event.type == pygame.KEYDOWN and event.key == pygame.K_UP and not is_paused and not ai_mode_active:
             if (game_state == STATE_BATTLE and heroine_zoomout_frame >= BATTLE_HEROINE_ZOOMOUT_FRAMES
-                    and battle_phase in (BATTLE_PHASE_COMMAND_HEROINE, BATTLE_PHASE_COMMAND_SAMURAI, BATTLE_PHASE_COMMAND_WARRIOR)):
+                    and battle_phase in _all_cmd):
                 battle_menu_cursor_step(-1)
 
         if event.type == pygame.KEYDOWN and event.key == pygame.K_DOWN and not is_paused and not ai_mode_active:
             if (game_state == STATE_BATTLE and heroine_zoomout_frame >= BATTLE_HEROINE_ZOOMOUT_FRAMES
-                    and battle_phase in (BATTLE_PHASE_COMMAND_HEROINE, BATTLE_PHASE_COMMAND_SAMURAI, BATTLE_PHASE_COMMAND_WARRIOR)):
+                    and battle_phase in _all_cmd):
                 battle_menu_cursor_step(1)
 
         # ステータスモード：上下キーでキャラクターの前姿／後ろ姿を切り替え（システムポーズ中は無効）
@@ -1926,7 +2282,7 @@ def process_input():
         # （システムポーズ中は意図しない進行を防ぐため無効。バトル・リザルトでのこの操作はAIユーザモード中も無効＝AI側が自動で行う）
         if event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN and not is_paused:
             if (not ai_mode_active and game_state == STATE_BATTLE and heroine_zoomout_frame >= BATTLE_HEROINE_ZOOMOUT_FRAMES
-                    and battle_phase in (BATTLE_PHASE_COMMAND_HEROINE, BATTLE_PHASE_COMMAND_SAMURAI, BATTLE_PHASE_COMMAND_WARRIOR)):
+                    and battle_phase in _all_cmd):
                 battle_command_confirm()
             elif not ai_mode_active and game_state == STATE_RESULT:
                 result_to_field()
@@ -1939,11 +2295,14 @@ def process_input():
             if game_state == STATE_STATUS and status_phase == STATUS_PHASE_OPEN:
                 status_phase = STATUS_PHASE_CLOSING
             elif (not ai_mode_active and game_state == STATE_BATTLE and heroine_zoomout_frame >= BATTLE_HEROINE_ZOOMOUT_FRAMES
-                    and battle_phase in (battle_second_command_phase(), battle_third_command_phase())):
-                if battle_phase == battle_third_command_phase():
-                    battle_phase = battle_second_command_phase()
-                else:
-                    battle_phase = battle_first_command_phase()
+                    and battle_phase != battle_first_command_phase() and battle_phase in _all_cmd):
+                phase_fns = [battle_first_command_phase, battle_second_command_phase, battle_third_command_phase,
+                             battle_fourth_command_phase, battle_fifth_command_phase, battle_sixth_command_phase,
+                             battle_seventh_command_phase]
+                phases = [f() for f in phase_fns]
+                if battle_phase in phases[1:]:
+                    idx = phases.index(battle_phase)
+                    battle_phase = phases[idx - 1]
 
         # 矢印右キー：ポーズ中は1フレームだけ処理を進める（押し続けるとキーリピートでも進む）
         if event.type == pygame.KEYDOWN and event.key == pygame.K_RIGHT:
@@ -2005,18 +2364,28 @@ def update(dt):
     global battle_whip_phase, battle_whip_frame
     global battle_samurai_whip_phase, battle_samurai_whip_frame
     global battle_warrior_whip_phase, battle_warrior_whip_frame
+    global battle_sister_whip_phase, battle_sister_whip_frame
+    global battle_kunoichi_whip_phase, battle_kunoichi_whip_frame
+    global battle_wizard_whip_phase, battle_wizard_whip_frame
+    global battle_fighter_whip_phase, battle_fighter_whip_frame
     global battle_flame_phase, battle_flame_frame
     global battle_dance_phase, battle_dance_frame
     global samurai_powered_up
     global battle_enemy_attack_phase, battle_enemy_attack_frame, battle_enemy_attack_target
     global battle_target_cursor_frame
     global battle_target_enemy_index, battle_samurai_target_enemy_index, battle_warrior_target_enemy_index
+    global battle_sister_target_enemy_index, battle_kunoichi_target_enemy_index
+    global battle_wizard_target_enemy_index, battle_fighter_target_enemy_index
     global enemy_defeated, enemy_hp, battle_annihilate_targets, battle_annihilate_frame
-    global heroine_hp, samurai_hp, warrior_hp
+    global heroine_hp, samurai_hp, warrior_hp, sister_hp, kunoichi_hp, wizard_hp, fighter_hp
     global status_phase, status_anim_frame
     global heroine_damage_anim_old_hp, heroine_damage_anim_new_hp, heroine_damage_anim_frame, heroine_damage_anim_flash_color
     global samurai_damage_anim_old_hp, samurai_damage_anim_new_hp, samurai_damage_anim_frame, samurai_damage_anim_flash_color
     global warrior_damage_anim_old_hp, warrior_damage_anim_new_hp, warrior_damage_anim_frame, warrior_damage_anim_flash_color
+    global sister_damage_anim_old_hp, sister_damage_anim_new_hp, sister_damage_anim_frame, sister_damage_anim_flash_color
+    global kunoichi_damage_anim_old_hp, kunoichi_damage_anim_new_hp, kunoichi_damage_anim_frame, kunoichi_damage_anim_flash_color
+    global wizard_damage_anim_old_hp, wizard_damage_anim_new_hp, wizard_damage_anim_frame, wizard_damage_anim_flash_color
+    global fighter_damage_anim_old_hp, fighter_damage_anim_new_hp, fighter_damage_anim_frame, fighter_damage_anim_flash_color
     global battle_slash_frame, battle_slash_target_enemy_index
     global battle_shingan_frame, battle_shingan_slash_frames, battle_shingan_slash_angles, battle_shingan_target_enemy_index
 
@@ -2073,6 +2442,14 @@ def update(dt):
             samurai_damage_anim_frame += 1
         if warrior_damage_anim_frame < DAMAGE_ANIM_DONE_FRAME:
             warrior_damage_anim_frame += 1
+        if sister_damage_anim_frame < DAMAGE_ANIM_DONE_FRAME:
+            sister_damage_anim_frame += 1
+        if kunoichi_damage_anim_frame < DAMAGE_ANIM_DONE_FRAME:
+            kunoichi_damage_anim_frame += 1
+        if wizard_damage_anim_frame < DAMAGE_ANIM_DONE_FRAME:
+            wizard_damage_anim_frame += 1
+        if fighter_damage_anim_frame < DAMAGE_ANIM_DONE_FRAME:
+            fighter_damage_anim_frame += 1
         for i in range(len(enemy_damage_anim_frame)):
             if enemy_damage_anim_frame[i] < DAMAGE_ANIM_DONE_FRAME:
                 enemy_damage_anim_frame[i] += 1
@@ -2103,6 +2480,14 @@ def update(dt):
             sound_battle2_bgm.play(loops=-1)
             if battle_focus_character == -3:
                 play_warrior_battle_start_voice()
+            elif battle_focus_character == -4:
+                _play_battle_start_voice_from(voice_sister_battle_start_list)
+            elif battle_focus_character == -5:
+                _play_battle_start_voice_from(voice_kunoichi_battle_start_list)
+            elif battle_focus_character == -6:
+                _play_battle_start_voice_from(voice_wizard_battle_start_list)
+            elif battle_focus_character == -7:
+                _play_battle_start_voice_from(voice_fighter_battle_start_list)
             elif battle_focus_character == -2:
                 play_samurai_battle_start_voice()
             else:
@@ -2287,6 +2672,174 @@ def update(dt):
                             if battle_warrior_whip_frame >= BATTLE_WHIP_APPROACH_FRAMES:
                                 battle_warrior_target_enemy_index = find_alive_enemy_index(battle_warrior_target_enemy_index, 1)
                                 advance_battle_turn()
+                    elif attacker == -4:
+                        if battle_sister_whip_phase == BATTLE_WHIP_PHASE_APPROACH:
+                            battle_sister_whip_frame += 1
+                            if battle_sister_whip_frame >= BATTLE_WHIP_APPROACH_FRAMES:
+                                battle_sister_whip_phase = BATTLE_WHIP_PHASE_DAMAGE_WAIT
+                                battle_sister_whip_frame = 0
+                        elif battle_sister_whip_phase == BATTLE_WHIP_PHASE_DAMAGE_WAIT:
+                            battle_sister_whip_frame += 1
+                            if battle_sister_whip_frame >= BATTLE_WHIP_DAMAGE_DELAY_FRAMES:
+                                battle_sister_whip_phase = BATTLE_WHIP_PHASE_FLASH
+                                battle_sister_whip_frame = 0
+                                if voice_goblin_damaged:
+                                    voice_goblin_damaged.play()
+                        elif battle_sister_whip_phase == BATTLE_WHIP_PHASE_FLASH:
+                            battle_sister_whip_frame += 1
+                            if battle_sister_whip_frame >= BATTLE_WHIP_FLASH_FRAMES:
+                                target = battle_sister_target_enemy_index
+                                damage = random.randint(BATTLE_WHIP_DAMAGE_MIN, BATTLE_WHIP_DAMAGE_MAX)
+                                old_display_hp = get_damage_display_hp(enemy_damage_anim_old_hp[target], enemy_damage_anim_new_hp[target], enemy_damage_anim_frame[target])
+                                enemy_hp[target] = max(0, enemy_hp[target] - damage)
+                                enemy_damage_anim_old_hp[target] = old_display_hp
+                                enemy_damage_anim_new_hp[target] = enemy_hp[target]
+                                enemy_damage_anim_frame[target]  = 0
+                                enemy_damage_anim_flash_color[target] = DAMAGE_FLASH_COLOR_WHIP
+                                if enemy_hp[target] <= 0:
+                                    enemy_defeated[target] = True
+                                    battle_annihilate_targets = [target]
+                                    battle_annihilate_frame   = 0
+                                if all(enemy_defeated):
+                                    sis_target_x = int(SCREEN_W * ENEMY_X_RATIOS[target])
+                                    sis_target_bottom_y = SCREEN_H - int(SCREEN_H * BATTLE_WHIP_TARGET_GROUND_Y_FROM_BOTTOM_RATIO)
+                                    sis_target_img_h = int(SCREEN_H * BATTLE_WHIP_TARGET_SCALE)
+                                    enter_result_state(sister_finish=True,
+                                                        sister_override=(sis_target_x, sis_target_bottom_y, sis_target_img_h))
+                                else:
+                                    battle_sister_whip_phase = BATTLE_WHIP_PHASE_RETURN
+                                    battle_sister_whip_frame = 0
+                        elif battle_sister_whip_phase == BATTLE_WHIP_PHASE_RETURN:
+                            battle_sister_whip_frame += 1
+                            if battle_sister_whip_frame >= BATTLE_WHIP_APPROACH_FRAMES:
+                                battle_sister_target_enemy_index = find_alive_enemy_index(battle_sister_target_enemy_index, 1)
+                                advance_battle_turn()
+                    elif attacker == -5:
+                        if battle_kunoichi_whip_phase == BATTLE_WHIP_PHASE_APPROACH:
+                            battle_kunoichi_whip_frame += 1
+                            if battle_kunoichi_whip_frame >= BATTLE_WHIP_APPROACH_FRAMES:
+                                battle_kunoichi_whip_phase = BATTLE_WHIP_PHASE_DAMAGE_WAIT
+                                battle_kunoichi_whip_frame = 0
+                        elif battle_kunoichi_whip_phase == BATTLE_WHIP_PHASE_DAMAGE_WAIT:
+                            battle_kunoichi_whip_frame += 1
+                            if battle_kunoichi_whip_frame >= BATTLE_WHIP_DAMAGE_DELAY_FRAMES:
+                                battle_kunoichi_whip_phase = BATTLE_WHIP_PHASE_FLASH
+                                battle_kunoichi_whip_frame = 0
+                                if voice_goblin_damaged:
+                                    voice_goblin_damaged.play()
+                        elif battle_kunoichi_whip_phase == BATTLE_WHIP_PHASE_FLASH:
+                            battle_kunoichi_whip_frame += 1
+                            if battle_kunoichi_whip_frame >= BATTLE_WHIP_FLASH_FRAMES:
+                                target = battle_kunoichi_target_enemy_index
+                                damage = random.randint(BATTLE_WHIP_DAMAGE_MIN, BATTLE_WHIP_DAMAGE_MAX)
+                                old_display_hp = get_damage_display_hp(enemy_damage_anim_old_hp[target], enemy_damage_anim_new_hp[target], enemy_damage_anim_frame[target])
+                                enemy_hp[target] = max(0, enemy_hp[target] - damage)
+                                enemy_damage_anim_old_hp[target] = old_display_hp
+                                enemy_damage_anim_new_hp[target] = enemy_hp[target]
+                                enemy_damage_anim_frame[target]  = 0
+                                enemy_damage_anim_flash_color[target] = DAMAGE_FLASH_COLOR_WHIP
+                                if enemy_hp[target] <= 0:
+                                    enemy_defeated[target] = True
+                                    battle_annihilate_targets = [target]
+                                    battle_annihilate_frame   = 0
+                                if all(enemy_defeated):
+                                    kun_target_x = int(SCREEN_W * ENEMY_X_RATIOS[target])
+                                    kun_target_bottom_y = SCREEN_H - int(SCREEN_H * BATTLE_WHIP_TARGET_GROUND_Y_FROM_BOTTOM_RATIO)
+                                    kun_target_img_h = int(SCREEN_H * BATTLE_WHIP_TARGET_SCALE)
+                                    enter_result_state(kunoichi_finish=True,
+                                                        kunoichi_override=(kun_target_x, kun_target_bottom_y, kun_target_img_h))
+                                else:
+                                    battle_kunoichi_whip_phase = BATTLE_WHIP_PHASE_RETURN
+                                    battle_kunoichi_whip_frame = 0
+                        elif battle_kunoichi_whip_phase == BATTLE_WHIP_PHASE_RETURN:
+                            battle_kunoichi_whip_frame += 1
+                            if battle_kunoichi_whip_frame >= BATTLE_WHIP_APPROACH_FRAMES:
+                                battle_kunoichi_target_enemy_index = find_alive_enemy_index(battle_kunoichi_target_enemy_index, 1)
+                                advance_battle_turn()
+                    elif attacker == -6:
+                        if battle_wizard_whip_phase == BATTLE_WHIP_PHASE_APPROACH:
+                            battle_wizard_whip_frame += 1
+                            if battle_wizard_whip_frame >= BATTLE_WHIP_APPROACH_FRAMES:
+                                battle_wizard_whip_phase = BATTLE_WHIP_PHASE_DAMAGE_WAIT
+                                battle_wizard_whip_frame = 0
+                        elif battle_wizard_whip_phase == BATTLE_WHIP_PHASE_DAMAGE_WAIT:
+                            battle_wizard_whip_frame += 1
+                            if battle_wizard_whip_frame >= BATTLE_WHIP_DAMAGE_DELAY_FRAMES:
+                                battle_wizard_whip_phase = BATTLE_WHIP_PHASE_FLASH
+                                battle_wizard_whip_frame = 0
+                                if voice_goblin_damaged:
+                                    voice_goblin_damaged.play()
+                        elif battle_wizard_whip_phase == BATTLE_WHIP_PHASE_FLASH:
+                            battle_wizard_whip_frame += 1
+                            if battle_wizard_whip_frame >= BATTLE_WHIP_FLASH_FRAMES:
+                                target = battle_wizard_target_enemy_index
+                                damage = random.randint(BATTLE_WHIP_DAMAGE_MIN, BATTLE_WHIP_DAMAGE_MAX)
+                                old_display_hp = get_damage_display_hp(enemy_damage_anim_old_hp[target], enemy_damage_anim_new_hp[target], enemy_damage_anim_frame[target])
+                                enemy_hp[target] = max(0, enemy_hp[target] - damage)
+                                enemy_damage_anim_old_hp[target] = old_display_hp
+                                enemy_damage_anim_new_hp[target] = enemy_hp[target]
+                                enemy_damage_anim_frame[target]  = 0
+                                enemy_damage_anim_flash_color[target] = DAMAGE_FLASH_COLOR_WHIP
+                                if enemy_hp[target] <= 0:
+                                    enemy_defeated[target] = True
+                                    battle_annihilate_targets = [target]
+                                    battle_annihilate_frame   = 0
+                                if all(enemy_defeated):
+                                    wiz_target_x = int(SCREEN_W * ENEMY_X_RATIOS[target])
+                                    wiz_target_bottom_y = SCREEN_H - int(SCREEN_H * BATTLE_WHIP_TARGET_GROUND_Y_FROM_BOTTOM_RATIO)
+                                    wiz_target_img_h = int(SCREEN_H * BATTLE_WHIP_TARGET_SCALE)
+                                    enter_result_state(wizard_finish=True,
+                                                        wizard_override=(wiz_target_x, wiz_target_bottom_y, wiz_target_img_h))
+                                else:
+                                    battle_wizard_whip_phase = BATTLE_WHIP_PHASE_RETURN
+                                    battle_wizard_whip_frame = 0
+                        elif battle_wizard_whip_phase == BATTLE_WHIP_PHASE_RETURN:
+                            battle_wizard_whip_frame += 1
+                            if battle_wizard_whip_frame >= BATTLE_WHIP_APPROACH_FRAMES:
+                                battle_wizard_target_enemy_index = find_alive_enemy_index(battle_wizard_target_enemy_index, 1)
+                                advance_battle_turn()
+                    elif attacker == -7:
+                        if battle_fighter_whip_phase == BATTLE_WHIP_PHASE_APPROACH:
+                            battle_fighter_whip_frame += 1
+                            if battle_fighter_whip_frame >= BATTLE_WHIP_APPROACH_FRAMES:
+                                battle_fighter_whip_phase = BATTLE_WHIP_PHASE_DAMAGE_WAIT
+                                battle_fighter_whip_frame = 0
+                        elif battle_fighter_whip_phase == BATTLE_WHIP_PHASE_DAMAGE_WAIT:
+                            battle_fighter_whip_frame += 1
+                            if battle_fighter_whip_frame >= BATTLE_WHIP_DAMAGE_DELAY_FRAMES:
+                                battle_fighter_whip_phase = BATTLE_WHIP_PHASE_FLASH
+                                battle_fighter_whip_frame = 0
+                                if voice_goblin_damaged:
+                                    voice_goblin_damaged.play()
+                        elif battle_fighter_whip_phase == BATTLE_WHIP_PHASE_FLASH:
+                            battle_fighter_whip_frame += 1
+                            if battle_fighter_whip_frame >= BATTLE_WHIP_FLASH_FRAMES:
+                                target = battle_fighter_target_enemy_index
+                                damage = random.randint(BATTLE_WHIP_DAMAGE_MIN, BATTLE_WHIP_DAMAGE_MAX)
+                                old_display_hp = get_damage_display_hp(enemy_damage_anim_old_hp[target], enemy_damage_anim_new_hp[target], enemy_damage_anim_frame[target])
+                                enemy_hp[target] = max(0, enemy_hp[target] - damage)
+                                enemy_damage_anim_old_hp[target] = old_display_hp
+                                enemy_damage_anim_new_hp[target] = enemy_hp[target]
+                                enemy_damage_anim_frame[target]  = 0
+                                enemy_damage_anim_flash_color[target] = DAMAGE_FLASH_COLOR_WHIP
+                                if enemy_hp[target] <= 0:
+                                    enemy_defeated[target] = True
+                                    battle_annihilate_targets = [target]
+                                    battle_annihilate_frame   = 0
+                                if all(enemy_defeated):
+                                    fig_target_x = int(SCREEN_W * ENEMY_X_RATIOS[target])
+                                    fig_target_bottom_y = SCREEN_H - int(SCREEN_H * BATTLE_WHIP_TARGET_GROUND_Y_FROM_BOTTOM_RATIO)
+                                    fig_target_img_h = int(SCREEN_H * BATTLE_WHIP_TARGET_SCALE)
+                                    enter_result_state(fighter_finish=True,
+                                                        fighter_override=(fig_target_x, fig_target_bottom_y, fig_target_img_h))
+                                else:
+                                    battle_fighter_whip_phase = BATTLE_WHIP_PHASE_RETURN
+                                    battle_fighter_whip_frame = 0
+                        elif battle_fighter_whip_phase == BATTLE_WHIP_PHASE_RETURN:
+                            battle_fighter_whip_frame += 1
+                            if battle_fighter_whip_frame >= BATTLE_WHIP_APPROACH_FRAMES:
+                                battle_fighter_target_enemy_index = find_alive_enemy_index(battle_fighter_target_enemy_index, 1)
+                                advance_battle_turn()
                     elif battle_menu_selected_index == BATTLE_MENU_INDEX_WHIP:
                         # ムチ：攻撃対象（battle_target_enemy_index）を攻撃する
                         # （接近 → 最接近（攻撃ボイス再生） → ダメージ待機 → 白色点滅 → 元の位置へ後退）
@@ -2441,6 +2994,34 @@ def update(dt):
                                 warrior_damage_anim_flash_color = DAMAGE_FLASH_COLOR_ENEMY_ATTACK
                                 if voice_warrior_damaged:
                                     voice_warrior_damaged.play()
+                            elif battle_enemy_attack_target == -4:
+                                old_display_hp = get_damage_display_hp(sister_damage_anim_old_hp, sister_damage_anim_new_hp, sister_damage_anim_frame)
+                                sister_hp = max(0, sister_hp - damage)
+                                sister_damage_anim_old_hp = old_display_hp
+                                sister_damage_anim_new_hp = sister_hp
+                                sister_damage_anim_frame  = 0
+                                sister_damage_anim_flash_color = DAMAGE_FLASH_COLOR_ENEMY_ATTACK
+                            elif battle_enemy_attack_target == -5:
+                                old_display_hp = get_damage_display_hp(kunoichi_damage_anim_old_hp, kunoichi_damage_anim_new_hp, kunoichi_damage_anim_frame)
+                                kunoichi_hp = max(0, kunoichi_hp - damage)
+                                kunoichi_damage_anim_old_hp = old_display_hp
+                                kunoichi_damage_anim_new_hp = kunoichi_hp
+                                kunoichi_damage_anim_frame  = 0
+                                kunoichi_damage_anim_flash_color = DAMAGE_FLASH_COLOR_ENEMY_ATTACK
+                            elif battle_enemy_attack_target == -6:
+                                old_display_hp = get_damage_display_hp(wizard_damage_anim_old_hp, wizard_damage_anim_new_hp, wizard_damage_anim_frame)
+                                wizard_hp = max(0, wizard_hp - damage)
+                                wizard_damage_anim_old_hp = old_display_hp
+                                wizard_damage_anim_new_hp = wizard_hp
+                                wizard_damage_anim_frame  = 0
+                                wizard_damage_anim_flash_color = DAMAGE_FLASH_COLOR_ENEMY_ATTACK
+                            elif battle_enemy_attack_target == -7:
+                                old_display_hp = get_damage_display_hp(fighter_damage_anim_old_hp, fighter_damage_anim_new_hp, fighter_damage_anim_frame)
+                                fighter_hp = max(0, fighter_hp - damage)
+                                fighter_damage_anim_old_hp = old_display_hp
+                                fighter_damage_anim_new_hp = fighter_hp
+                                fighter_damage_anim_frame  = 0
+                                fighter_damage_anim_flash_color = DAMAGE_FLASH_COLOR_ENEMY_ATTACK
                             else:
                                 old_display_hp = get_damage_display_hp(heroine_damage_anim_old_hp, heroine_damage_anim_new_hp, heroine_damage_anim_frame)
                                 heroine_hp = max(0, heroine_hp - damage)
@@ -2824,6 +3405,7 @@ def apply_damage_flash(img_raw, filename, char_height_m, old_hp, new_hp, max_hp,
 # ---------------------------------------------------------
 def render_battle():
     global heroine_whip_trail_key, samurai_whip_trail_key, warrior_whip_trail_key
+    global sister_whip_trail_key, kunoichi_whip_trail_key, wizard_whip_trail_key, fighter_whip_trail_key
 
     render_field()
 
@@ -2864,9 +3446,25 @@ def render_battle():
     warrior_base_bottom_y = focus_bottom_y
     warrior_base_img_h = max(1, int(WARRIOR_HEIGHT_M * focus_meter_to_pixel))
 
-    heroine_base_x = SCREEN_W // 2 + int(battle_character_world_offset_m[-1] * focus_meter_to_pixel)
-    sam_base_x     = SCREEN_W // 2 + int(battle_character_world_offset_m[-2] * focus_meter_to_pixel)
-    warrior_base_x = SCREEN_W // 2 + int(battle_character_world_offset_m[-3] * focus_meter_to_pixel)
+    sister_base_bottom_y = focus_bottom_y
+    sister_base_img_h = max(1, int(SISTER_HEIGHT_M * focus_meter_to_pixel))
+
+    kunoichi_base_bottom_y = focus_bottom_y
+    kunoichi_base_img_h = max(1, int(KUNOICHI_HEIGHT_M * focus_meter_to_pixel))
+
+    wizard_base_bottom_y = focus_bottom_y
+    wizard_base_img_h = max(1, int(WIZARD_HEIGHT_M * focus_meter_to_pixel))
+
+    fighter_base_bottom_y = focus_bottom_y
+    fighter_base_img_h = max(1, int(FIGHTER_HEIGHT_M * focus_meter_to_pixel))
+
+    heroine_base_x  = SCREEN_W // 2 + int(battle_character_world_offset_m[-1] * focus_meter_to_pixel)
+    sam_base_x      = SCREEN_W // 2 + int(battle_character_world_offset_m[-2] * focus_meter_to_pixel)
+    warrior_base_x  = SCREEN_W // 2 + int(battle_character_world_offset_m[-3] * focus_meter_to_pixel)
+    sister_base_x   = SCREEN_W // 2 + int(battle_character_world_offset_m[-4] * focus_meter_to_pixel)
+    kunoichi_base_x = SCREEN_W // 2 + int(battle_character_world_offset_m[-5] * focus_meter_to_pixel)
+    wizard_base_x   = SCREEN_W // 2 + int(battle_character_world_offset_m[-6] * focus_meter_to_pixel)
+    fighter_base_x  = SCREEN_W // 2 + int(battle_character_world_offset_m[-7] * focus_meter_to_pixel)
 
     # ★ マカダンス：ヒロインが画面下に消えた後、バトルウィンドウがピンクに染まりダンス画像を再生する
     dance_active = (battle_phase == BATTLE_PHASE_EXCHANGE and battle_menu_selected_index == BATTLE_MENU_INDEX_DANCE
@@ -2990,6 +3588,22 @@ def render_battle():
                     attack_target_x = warrior_base_x
                     attack_target_bottom_y = band_bottom - int(SCREEN_H * BATTLE_ENEMY_ATTACK_TARGET_GROUND_Y_OFFSET_RATIO)
                     attack_target_img_h = int(SCREEN_H * BATTLE_ENEMY_ATTACK_TARGET_SCALE * (WARRIOR_HEIGHT_M / HEROINE_HEIGHT_M))
+                elif battle_enemy_attack_target == -4:
+                    attack_target_x = sister_base_x
+                    attack_target_bottom_y = band_bottom - int(SCREEN_H * BATTLE_ENEMY_ATTACK_TARGET_GROUND_Y_OFFSET_RATIO)
+                    attack_target_img_h = int(SCREEN_H * BATTLE_ENEMY_ATTACK_TARGET_SCALE * (SISTER_HEIGHT_M / HEROINE_HEIGHT_M))
+                elif battle_enemy_attack_target == -5:
+                    attack_target_x = kunoichi_base_x
+                    attack_target_bottom_y = band_bottom - int(SCREEN_H * BATTLE_ENEMY_ATTACK_TARGET_GROUND_Y_OFFSET_RATIO)
+                    attack_target_img_h = int(SCREEN_H * BATTLE_ENEMY_ATTACK_TARGET_SCALE * (KUNOICHI_HEIGHT_M / HEROINE_HEIGHT_M))
+                elif battle_enemy_attack_target == -6:
+                    attack_target_x = wizard_base_x
+                    attack_target_bottom_y = band_bottom - int(SCREEN_H * BATTLE_ENEMY_ATTACK_TARGET_GROUND_Y_OFFSET_RATIO)
+                    attack_target_img_h = int(SCREEN_H * BATTLE_ENEMY_ATTACK_TARGET_SCALE * (WIZARD_HEIGHT_M / HEROINE_HEIGHT_M))
+                elif battle_enemy_attack_target == -7:
+                    attack_target_x = fighter_base_x
+                    attack_target_bottom_y = band_bottom - int(SCREEN_H * BATTLE_ENEMY_ATTACK_TARGET_GROUND_Y_OFFSET_RATIO)
+                    attack_target_img_h = int(SCREEN_H * BATTLE_ENEMY_ATTACK_TARGET_SCALE * (FIGHTER_HEIGHT_M / HEROINE_HEIGHT_M))
                 else:
                     # ヒロインへの攻撃：ヒロインの基準位置に向けて接近する
                     attack_target_x = heroine_base_x
@@ -3459,24 +4073,422 @@ def render_battle():
                     warrior_whip_trail.clear()
                     warrior_whip_trail_key = None
 
-                # ★ 攻撃中の味方キャラ（ヒロイン:whip_active／サムライ:samurai_active／女戦士:warrior_active）を、
+                # ★ シスター（仲間キャラ）の後ろ姿
+                if sister_back_img_raw:
+                    sis_orig_w, sis_orig_h = sister_back_img_raw.get_size()
+                    sister_active = (battle_phase == BATTLE_PHASE_EXCHANGE and battle_attacking_enemy_index == -1
+                                     and battle_turn_order[battle_turn_index] == -4)
+                    if sister_active:
+                        if battle_sister_whip_phase == BATTLE_WHIP_PHASE_APPROACH:
+                            raw_t = (battle_sister_whip_frame / BATTLE_WHIP_APPROACH_FRAMES) if BATTLE_WHIP_APPROACH_FRAMES > 0 else 1.0
+                            sis_t = 1.0 - (1.0 - raw_t) ** 2
+                        elif battle_sister_whip_phase in (BATTLE_WHIP_PHASE_DAMAGE_WAIT, BATTLE_WHIP_PHASE_FLASH):
+                            sis_t = 1.0
+                        else:
+                            raw_t = (battle_sister_whip_frame / BATTLE_WHIP_APPROACH_FRAMES) if BATTLE_WHIP_APPROACH_FRAMES > 0 else 1.0
+                            sis_t = (1.0 - raw_t) ** 2
+                        sis_t = max(0.0, min(1.0, sis_t))
+                        sis_target_x = int(SCREEN_W * ENEMY_X_RATIOS[battle_sister_target_enemy_index])
+                        sis_target_bottom_y = SCREEN_H - int(SCREEN_H * BATTLE_WHIP_TARGET_GROUND_Y_FROM_BOTTOM_RATIO)
+                        sis_target_img_h = int(SCREEN_H * BATTLE_WHIP_TARGET_SCALE * (SISTER_HEIGHT_M / HEROINE_HEIGHT_M))
+                        sister_x = int(sister_base_x + (sis_target_x - sister_base_x) * sis_t)
+                        sister_bottom_y = int(sister_base_bottom_y + (sis_target_bottom_y - sister_base_bottom_y) * sis_t)
+                        sister_img_h = max(1, int(sister_base_img_h + (sis_target_img_h - sister_base_img_h) * sis_t))
+                    else:
+                        sister_x = sister_base_x
+                        sister_bottom_y = sister_base_bottom_y
+                        sister_img_h = sister_base_img_h
+                    sister_img_w = max(1, int(sis_orig_w * sister_img_h / sis_orig_h))
+                    sister_final_w, sister_final_h = sister_img_w, sister_img_h
+                    if idle_active and not sister_active:
+                        sister_final_w = max(1, int(sister_img_w * idle_sx))
+                        sister_final_h = max(1, int(sister_img_h * idle_sy))
+                    sister_display_hp = get_damage_display_hp(sister_damage_anim_old_hp, sister_damage_anim_new_hp, sister_damage_anim_frame)
+                    sister_display_img_raw = apply_hp_grayscale(sister_back_img_raw, "sister_back.png", SISTER_HEIGHT_M, int(round(sister_display_hp)), SISTER_MAX_HP)
+                    sister_display_img_raw = apply_damage_flash(sister_display_img_raw, "sister_back.png", SISTER_HEIGHT_M, sister_damage_anim_old_hp, sister_damage_anim_new_hp, SISTER_MAX_HP, sister_damage_anim_frame, sister_damage_anim_flash_color)
+                    sister_img_surf, sister_img_pos, sister_img_rect = smoothscale_visible(sister_display_img_raw, sister_final_w, sister_final_h, (sister_x, sister_bottom_y), clip_rect)
+                    sis_moving = sister_active and battle_sister_whip_phase in (BATTLE_WHIP_PHASE_APPROACH, BATTLE_WHIP_PHASE_RETURN)
+                    sister_current_pos = (sister_x, sister_bottom_y, sister_img_h)
+                    sis_trail_history_size = max(BATTLE_WHIP_TRAIL_OFFSET_1, BATTLE_WHIP_TRAIL_OFFSET_2)
+
+                    def find_sister_trail_pos(offset):
+                        if offset <= 0 or len(sister_whip_trail) < offset:
+                            return None
+                        px, py, _ = sister_whip_trail[-offset]
+                        if (px - sister_x) ** 2 + (py - sister_bottom_y) ** 2 < BATTLE_WHIP_TRAIL_MIN_OFFSET_PX ** 2:
+                            return None
+                        return sister_whip_trail[-offset]
+
+                    sis_trail_a = find_sister_trail_pos(BATTLE_WHIP_TRAIL_OFFSET_1) if sis_moving else None
+                    sis_trail_b = find_sister_trail_pos(BATTLE_WHIP_TRAIL_OFFSET_2) if sis_moving else None
+
+                    def draw_sister_sprite():
+                        screen.set_clip(clip_rect)
+                        if sister_active and battle_sister_whip_phase == BATTLE_WHIP_PHASE_RETURN:
+                            if sis_trail_b is not None:
+                                blit_heroine_trail_image(sister_back_img_raw, sis_trail_b, BATTLE_WHIP_TRAIL_ALPHA_2, clip_rect)
+                            if sis_trail_a is not None:
+                                blit_heroine_trail_image(sister_back_img_raw, sis_trail_a, BATTLE_WHIP_TRAIL_ALPHA_1, clip_rect)
+                            if sister_img_surf is not None:
+                                screen.blit(sister_img_surf, sister_img_pos)
+                        else:
+                            if sister_img_surf is not None:
+                                screen.blit(sister_img_surf, sister_img_pos)
+                            if sis_trail_a is not None:
+                                blit_heroine_trail_image(sister_back_img_raw, sis_trail_a, BATTLE_WHIP_TRAIL_ALPHA_1, clip_rect)
+                            if sis_trail_b is not None:
+                                blit_heroine_trail_image(sister_back_img_raw, sis_trail_b, BATTLE_WHIP_TRAIL_ALPHA_2, clip_rect)
+                        screen.set_clip(None)
+                        sister_hp_text = font.render(f"{sister_hp}/{SISTER_MAX_HP}", True, (255, 255, 255))
+                        sister_hp_rect = sister_hp_text.get_rect(midbottom=(sister_img_rect.centerx, sister_img_rect.top - 4))
+                        screen.blit(sister_hp_text, sister_hp_rect)
+
+                    if sis_moving:
+                        sis_tkey = (battle_sister_whip_phase, battle_sister_whip_frame)
+                        if sister_whip_trail_key != sis_tkey:
+                            sister_whip_trail_key = sis_tkey
+                            sister_whip_trail.append(sister_current_pos)
+                            if len(sister_whip_trail) > sis_trail_history_size:
+                                sister_whip_trail.pop(0)
+                    else:
+                        sister_whip_trail.clear()
+                        sister_whip_trail_key = None
+                else:
+                    sister_active = False
+                    def draw_sister_sprite(): pass
+
+                # ★ くノ一（仲間キャラ）の後ろ姿
+                if kunoichi_back_img_raw:
+                    kun_orig_w, kun_orig_h = kunoichi_back_img_raw.get_size()
+                    kunoichi_active = (battle_phase == BATTLE_PHASE_EXCHANGE and battle_attacking_enemy_index == -1
+                                      and battle_turn_order[battle_turn_index] == -5)
+                    if kunoichi_active:
+                        if battle_kunoichi_whip_phase == BATTLE_WHIP_PHASE_APPROACH:
+                            raw_t = (battle_kunoichi_whip_frame / BATTLE_WHIP_APPROACH_FRAMES) if BATTLE_WHIP_APPROACH_FRAMES > 0 else 1.0
+                            kun_t = 1.0 - (1.0 - raw_t) ** 2
+                        elif battle_kunoichi_whip_phase in (BATTLE_WHIP_PHASE_DAMAGE_WAIT, BATTLE_WHIP_PHASE_FLASH):
+                            kun_t = 1.0
+                        else:
+                            raw_t = (battle_kunoichi_whip_frame / BATTLE_WHIP_APPROACH_FRAMES) if BATTLE_WHIP_APPROACH_FRAMES > 0 else 1.0
+                            kun_t = (1.0 - raw_t) ** 2
+                        kun_t = max(0.0, min(1.0, kun_t))
+                        kun_target_x = int(SCREEN_W * ENEMY_X_RATIOS[battle_kunoichi_target_enemy_index])
+                        kun_target_bottom_y = SCREEN_H - int(SCREEN_H * BATTLE_WHIP_TARGET_GROUND_Y_FROM_BOTTOM_RATIO)
+                        kun_target_img_h = int(SCREEN_H * BATTLE_WHIP_TARGET_SCALE * (KUNOICHI_HEIGHT_M / HEROINE_HEIGHT_M))
+                        kunoichi_x = int(kunoichi_base_x + (kun_target_x - kunoichi_base_x) * kun_t)
+                        kunoichi_bottom_y = int(kunoichi_base_bottom_y + (kun_target_bottom_y - kunoichi_base_bottom_y) * kun_t)
+                        kunoichi_img_h = max(1, int(kunoichi_base_img_h + (kun_target_img_h - kunoichi_base_img_h) * kun_t))
+                    else:
+                        kunoichi_x = kunoichi_base_x
+                        kunoichi_bottom_y = kunoichi_base_bottom_y
+                        kunoichi_img_h = kunoichi_base_img_h
+                    kunoichi_img_w = max(1, int(kun_orig_w * kunoichi_img_h / kun_orig_h))
+                    kunoichi_final_w, kunoichi_final_h = kunoichi_img_w, kunoichi_img_h
+                    if idle_active and not kunoichi_active:
+                        kunoichi_final_w = max(1, int(kunoichi_img_w * idle_sx))
+                        kunoichi_final_h = max(1, int(kunoichi_img_h * idle_sy))
+                    kunoichi_display_hp = get_damage_display_hp(kunoichi_damage_anim_old_hp, kunoichi_damage_anim_new_hp, kunoichi_damage_anim_frame)
+                    kunoichi_display_img_raw = apply_hp_grayscale(kunoichi_back_img_raw, "kunoichi_back.png", KUNOICHI_HEIGHT_M, int(round(kunoichi_display_hp)), KUNOICHI_MAX_HP)
+                    kunoichi_display_img_raw = apply_damage_flash(kunoichi_display_img_raw, "kunoichi_back.png", KUNOICHI_HEIGHT_M, kunoichi_damage_anim_old_hp, kunoichi_damage_anim_new_hp, KUNOICHI_MAX_HP, kunoichi_damage_anim_frame, kunoichi_damage_anim_flash_color)
+                    kunoichi_img_surf, kunoichi_img_pos, kunoichi_img_rect = smoothscale_visible(kunoichi_display_img_raw, kunoichi_final_w, kunoichi_final_h, (kunoichi_x, kunoichi_bottom_y), clip_rect)
+                    kun_moving = kunoichi_active and battle_kunoichi_whip_phase in (BATTLE_WHIP_PHASE_APPROACH, BATTLE_WHIP_PHASE_RETURN)
+                    kunoichi_current_pos = (kunoichi_x, kunoichi_bottom_y, kunoichi_img_h)
+                    kun_trail_history_size = max(BATTLE_WHIP_TRAIL_OFFSET_1, BATTLE_WHIP_TRAIL_OFFSET_2)
+
+                    def find_kunoichi_trail_pos(offset):
+                        if offset <= 0 or len(kunoichi_whip_trail) < offset:
+                            return None
+                        px, py, _ = kunoichi_whip_trail[-offset]
+                        if (px - kunoichi_x) ** 2 + (py - kunoichi_bottom_y) ** 2 < BATTLE_WHIP_TRAIL_MIN_OFFSET_PX ** 2:
+                            return None
+                        return kunoichi_whip_trail[-offset]
+
+                    kun_trail_a = find_kunoichi_trail_pos(BATTLE_WHIP_TRAIL_OFFSET_1) if kun_moving else None
+                    kun_trail_b = find_kunoichi_trail_pos(BATTLE_WHIP_TRAIL_OFFSET_2) if kun_moving else None
+
+                    def draw_kunoichi_sprite():
+                        screen.set_clip(clip_rect)
+                        if kunoichi_active and battle_kunoichi_whip_phase == BATTLE_WHIP_PHASE_RETURN:
+                            if kun_trail_b is not None:
+                                blit_heroine_trail_image(kunoichi_back_img_raw, kun_trail_b, BATTLE_WHIP_TRAIL_ALPHA_2, clip_rect)
+                            if kun_trail_a is not None:
+                                blit_heroine_trail_image(kunoichi_back_img_raw, kun_trail_a, BATTLE_WHIP_TRAIL_ALPHA_1, clip_rect)
+                            if kunoichi_img_surf is not None:
+                                screen.blit(kunoichi_img_surf, kunoichi_img_pos)
+                        else:
+                            if kunoichi_img_surf is not None:
+                                screen.blit(kunoichi_img_surf, kunoichi_img_pos)
+                            if kun_trail_a is not None:
+                                blit_heroine_trail_image(kunoichi_back_img_raw, kun_trail_a, BATTLE_WHIP_TRAIL_ALPHA_1, clip_rect)
+                            if kun_trail_b is not None:
+                                blit_heroine_trail_image(kunoichi_back_img_raw, kun_trail_b, BATTLE_WHIP_TRAIL_ALPHA_2, clip_rect)
+                        screen.set_clip(None)
+                        kunoichi_hp_text = font.render(f"{kunoichi_hp}/{KUNOICHI_MAX_HP}", True, (255, 255, 255))
+                        kunoichi_hp_rect = kunoichi_hp_text.get_rect(midbottom=(kunoichi_img_rect.centerx, kunoichi_img_rect.top - 4))
+                        screen.blit(kunoichi_hp_text, kunoichi_hp_rect)
+
+                    if kun_moving:
+                        kun_tkey = (battle_kunoichi_whip_phase, battle_kunoichi_whip_frame)
+                        if kunoichi_whip_trail_key != kun_tkey:
+                            kunoichi_whip_trail_key = kun_tkey
+                            kunoichi_whip_trail.append(kunoichi_current_pos)
+                            if len(kunoichi_whip_trail) > kun_trail_history_size:
+                                kunoichi_whip_trail.pop(0)
+                    else:
+                        kunoichi_whip_trail.clear()
+                        kunoichi_whip_trail_key = None
+                else:
+                    kunoichi_active = False
+                    def draw_kunoichi_sprite(): pass
+
+                # ★ 魔法使い（仲間キャラ）の後ろ姿
+                if wizard_back_img_raw:
+                    wiz_orig_w, wiz_orig_h = wizard_back_img_raw.get_size()
+                    wizard_active = (battle_phase == BATTLE_PHASE_EXCHANGE and battle_attacking_enemy_index == -1
+                                     and battle_turn_order[battle_turn_index] == -6)
+                    if wizard_active:
+                        if battle_wizard_whip_phase == BATTLE_WHIP_PHASE_APPROACH:
+                            raw_t = (battle_wizard_whip_frame / BATTLE_WHIP_APPROACH_FRAMES) if BATTLE_WHIP_APPROACH_FRAMES > 0 else 1.0
+                            wiz_t = 1.0 - (1.0 - raw_t) ** 2
+                        elif battle_wizard_whip_phase in (BATTLE_WHIP_PHASE_DAMAGE_WAIT, BATTLE_WHIP_PHASE_FLASH):
+                            wiz_t = 1.0
+                        else:
+                            raw_t = (battle_wizard_whip_frame / BATTLE_WHIP_APPROACH_FRAMES) if BATTLE_WHIP_APPROACH_FRAMES > 0 else 1.0
+                            wiz_t = (1.0 - raw_t) ** 2
+                        wiz_t = max(0.0, min(1.0, wiz_t))
+                        wiz_target_x = int(SCREEN_W * ENEMY_X_RATIOS[battle_wizard_target_enemy_index])
+                        wiz_target_bottom_y = SCREEN_H - int(SCREEN_H * BATTLE_WHIP_TARGET_GROUND_Y_FROM_BOTTOM_RATIO)
+                        wiz_target_img_h = int(SCREEN_H * BATTLE_WHIP_TARGET_SCALE * (WIZARD_HEIGHT_M / HEROINE_HEIGHT_M))
+                        wizard_x = int(wizard_base_x + (wiz_target_x - wizard_base_x) * wiz_t)
+                        wizard_bottom_y = int(wizard_base_bottom_y + (wiz_target_bottom_y - wizard_base_bottom_y) * wiz_t)
+                        wizard_img_h = max(1, int(wizard_base_img_h + (wiz_target_img_h - wizard_base_img_h) * wiz_t))
+                    else:
+                        wizard_x = wizard_base_x
+                        wizard_bottom_y = wizard_base_bottom_y
+                        wizard_img_h = wizard_base_img_h
+                    wizard_img_w = max(1, int(wiz_orig_w * wizard_img_h / wiz_orig_h))
+                    wizard_final_w, wizard_final_h = wizard_img_w, wizard_img_h
+                    if idle_active and not wizard_active:
+                        wizard_final_w = max(1, int(wizard_img_w * idle_sx))
+                        wizard_final_h = max(1, int(wizard_img_h * idle_sy))
+                    wizard_display_hp = get_damage_display_hp(wizard_damage_anim_old_hp, wizard_damage_anim_new_hp, wizard_damage_anim_frame)
+                    wizard_display_img_raw = apply_hp_grayscale(wizard_back_img_raw, "wizard_back.png", WIZARD_HEIGHT_M, int(round(wizard_display_hp)), WIZARD_MAX_HP)
+                    wizard_display_img_raw = apply_damage_flash(wizard_display_img_raw, "wizard_back.png", WIZARD_HEIGHT_M, wizard_damage_anim_old_hp, wizard_damage_anim_new_hp, WIZARD_MAX_HP, wizard_damage_anim_frame, wizard_damage_anim_flash_color)
+                    wizard_img_surf, wizard_img_pos, wizard_img_rect = smoothscale_visible(wizard_display_img_raw, wizard_final_w, wizard_final_h, (wizard_x, wizard_bottom_y), clip_rect)
+                    wiz_moving = wizard_active and battle_wizard_whip_phase in (BATTLE_WHIP_PHASE_APPROACH, BATTLE_WHIP_PHASE_RETURN)
+                    wizard_current_pos = (wizard_x, wizard_bottom_y, wizard_img_h)
+                    wiz_trail_history_size = max(BATTLE_WHIP_TRAIL_OFFSET_1, BATTLE_WHIP_TRAIL_OFFSET_2)
+
+                    def find_wizard_trail_pos(offset):
+                        if offset <= 0 or len(wizard_whip_trail) < offset:
+                            return None
+                        px, py, _ = wizard_whip_trail[-offset]
+                        if (px - wizard_x) ** 2 + (py - wizard_bottom_y) ** 2 < BATTLE_WHIP_TRAIL_MIN_OFFSET_PX ** 2:
+                            return None
+                        return wizard_whip_trail[-offset]
+
+                    wiz_trail_a = find_wizard_trail_pos(BATTLE_WHIP_TRAIL_OFFSET_1) if wiz_moving else None
+                    wiz_trail_b = find_wizard_trail_pos(BATTLE_WHIP_TRAIL_OFFSET_2) if wiz_moving else None
+
+                    def draw_wizard_sprite():
+                        screen.set_clip(clip_rect)
+                        if wizard_active and battle_wizard_whip_phase == BATTLE_WHIP_PHASE_RETURN:
+                            if wiz_trail_b is not None:
+                                blit_heroine_trail_image(wizard_back_img_raw, wiz_trail_b, BATTLE_WHIP_TRAIL_ALPHA_2, clip_rect)
+                            if wiz_trail_a is not None:
+                                blit_heroine_trail_image(wizard_back_img_raw, wiz_trail_a, BATTLE_WHIP_TRAIL_ALPHA_1, clip_rect)
+                            if wizard_img_surf is not None:
+                                screen.blit(wizard_img_surf, wizard_img_pos)
+                        else:
+                            if wizard_img_surf is not None:
+                                screen.blit(wizard_img_surf, wizard_img_pos)
+                            if wiz_trail_a is not None:
+                                blit_heroine_trail_image(wizard_back_img_raw, wiz_trail_a, BATTLE_WHIP_TRAIL_ALPHA_1, clip_rect)
+                            if wiz_trail_b is not None:
+                                blit_heroine_trail_image(wizard_back_img_raw, wiz_trail_b, BATTLE_WHIP_TRAIL_ALPHA_2, clip_rect)
+                        screen.set_clip(None)
+                        wizard_hp_text = font.render(f"{wizard_hp}/{WIZARD_MAX_HP}", True, (255, 255, 255))
+                        wizard_hp_rect = wizard_hp_text.get_rect(midbottom=(wizard_img_rect.centerx, wizard_img_rect.top - 4))
+                        screen.blit(wizard_hp_text, wizard_hp_rect)
+
+                    if wiz_moving:
+                        wiz_tkey = (battle_wizard_whip_phase, battle_wizard_whip_frame)
+                        if wizard_whip_trail_key != wiz_tkey:
+                            wizard_whip_trail_key = wiz_tkey
+                            wizard_whip_trail.append(wizard_current_pos)
+                            if len(wizard_whip_trail) > wiz_trail_history_size:
+                                wizard_whip_trail.pop(0)
+                    else:
+                        wizard_whip_trail.clear()
+                        wizard_whip_trail_key = None
+                else:
+                    wizard_active = False
+                    def draw_wizard_sprite(): pass
+
+                # ★ 武道家（仲間キャラ）の後ろ姿
+                if fighter_back_img_raw:
+                    fig_orig_w, fig_orig_h = fighter_back_img_raw.get_size()
+                    fighter_active = (battle_phase == BATTLE_PHASE_EXCHANGE and battle_attacking_enemy_index == -1
+                                      and battle_turn_order[battle_turn_index] == -7)
+                    if fighter_active:
+                        if battle_fighter_whip_phase == BATTLE_WHIP_PHASE_APPROACH:
+                            raw_t = (battle_fighter_whip_frame / BATTLE_WHIP_APPROACH_FRAMES) if BATTLE_WHIP_APPROACH_FRAMES > 0 else 1.0
+                            fig_t = 1.0 - (1.0 - raw_t) ** 2
+                        elif battle_fighter_whip_phase in (BATTLE_WHIP_PHASE_DAMAGE_WAIT, BATTLE_WHIP_PHASE_FLASH):
+                            fig_t = 1.0
+                        else:
+                            raw_t = (battle_fighter_whip_frame / BATTLE_WHIP_APPROACH_FRAMES) if BATTLE_WHIP_APPROACH_FRAMES > 0 else 1.0
+                            fig_t = (1.0 - raw_t) ** 2
+                        fig_t = max(0.0, min(1.0, fig_t))
+                        fig_target_x = int(SCREEN_W * ENEMY_X_RATIOS[battle_fighter_target_enemy_index])
+                        fig_target_bottom_y = SCREEN_H - int(SCREEN_H * BATTLE_WHIP_TARGET_GROUND_Y_FROM_BOTTOM_RATIO)
+                        fig_target_img_h = int(SCREEN_H * BATTLE_WHIP_TARGET_SCALE * (FIGHTER_HEIGHT_M / HEROINE_HEIGHT_M))
+                        fighter_x = int(fighter_base_x + (fig_target_x - fighter_base_x) * fig_t)
+                        fighter_bottom_y = int(fighter_base_bottom_y + (fig_target_bottom_y - fighter_base_bottom_y) * fig_t)
+                        fighter_img_h = max(1, int(fighter_base_img_h + (fig_target_img_h - fighter_base_img_h) * fig_t))
+                    else:
+                        fighter_x = fighter_base_x
+                        fighter_bottom_y = fighter_base_bottom_y
+                        fighter_img_h = fighter_base_img_h
+                    fighter_img_w = max(1, int(fig_orig_w * fighter_img_h / fig_orig_h))
+                    fighter_final_w, fighter_final_h = fighter_img_w, fighter_img_h
+                    if idle_active and not fighter_active:
+                        fighter_final_w = max(1, int(fighter_img_w * idle_sx))
+                        fighter_final_h = max(1, int(fighter_img_h * idle_sy))
+                    fighter_display_hp = get_damage_display_hp(fighter_damage_anim_old_hp, fighter_damage_anim_new_hp, fighter_damage_anim_frame)
+                    fighter_display_img_raw = apply_hp_grayscale(fighter_back_img_raw, "fighter_back.png", FIGHTER_HEIGHT_M, int(round(fighter_display_hp)), FIGHTER_MAX_HP)
+                    fighter_display_img_raw = apply_damage_flash(fighter_display_img_raw, "fighter_back.png", FIGHTER_HEIGHT_M, fighter_damage_anim_old_hp, fighter_damage_anim_new_hp, FIGHTER_MAX_HP, fighter_damage_anim_frame, fighter_damage_anim_flash_color)
+                    fighter_img_surf, fighter_img_pos, fighter_img_rect = smoothscale_visible(fighter_display_img_raw, fighter_final_w, fighter_final_h, (fighter_x, fighter_bottom_y), clip_rect)
+                    fig_moving = fighter_active and battle_fighter_whip_phase in (BATTLE_WHIP_PHASE_APPROACH, BATTLE_WHIP_PHASE_RETURN)
+                    fighter_current_pos = (fighter_x, fighter_bottom_y, fighter_img_h)
+                    fig_trail_history_size = max(BATTLE_WHIP_TRAIL_OFFSET_1, BATTLE_WHIP_TRAIL_OFFSET_2)
+
+                    def find_fighter_trail_pos(offset):
+                        if offset <= 0 or len(fighter_whip_trail) < offset:
+                            return None
+                        px, py, _ = fighter_whip_trail[-offset]
+                        if (px - fighter_x) ** 2 + (py - fighter_bottom_y) ** 2 < BATTLE_WHIP_TRAIL_MIN_OFFSET_PX ** 2:
+                            return None
+                        return fighter_whip_trail[-offset]
+
+                    fig_trail_a = find_fighter_trail_pos(BATTLE_WHIP_TRAIL_OFFSET_1) if fig_moving else None
+                    fig_trail_b = find_fighter_trail_pos(BATTLE_WHIP_TRAIL_OFFSET_2) if fig_moving else None
+
+                    def draw_fighter_sprite():
+                        screen.set_clip(clip_rect)
+                        if fighter_active and battle_fighter_whip_phase == BATTLE_WHIP_PHASE_RETURN:
+                            if fig_trail_b is not None:
+                                blit_heroine_trail_image(fighter_back_img_raw, fig_trail_b, BATTLE_WHIP_TRAIL_ALPHA_2, clip_rect)
+                            if fig_trail_a is not None:
+                                blit_heroine_trail_image(fighter_back_img_raw, fig_trail_a, BATTLE_WHIP_TRAIL_ALPHA_1, clip_rect)
+                            if fighter_img_surf is not None:
+                                screen.blit(fighter_img_surf, fighter_img_pos)
+                        else:
+                            if fighter_img_surf is not None:
+                                screen.blit(fighter_img_surf, fighter_img_pos)
+                            if fig_trail_a is not None:
+                                blit_heroine_trail_image(fighter_back_img_raw, fig_trail_a, BATTLE_WHIP_TRAIL_ALPHA_1, clip_rect)
+                            if fig_trail_b is not None:
+                                blit_heroine_trail_image(fighter_back_img_raw, fig_trail_b, BATTLE_WHIP_TRAIL_ALPHA_2, clip_rect)
+                        screen.set_clip(None)
+                        fighter_hp_text = font.render(f"{fighter_hp}/{FIGHTER_MAX_HP}", True, (255, 255, 255))
+                        fighter_hp_rect = fighter_hp_text.get_rect(midbottom=(fighter_img_rect.centerx, fighter_img_rect.top - 4))
+                        screen.blit(fighter_hp_text, fighter_hp_rect)
+
+                    if fig_moving:
+                        fig_tkey = (battle_fighter_whip_phase, battle_fighter_whip_frame)
+                        if fighter_whip_trail_key != fig_tkey:
+                            fighter_whip_trail_key = fig_tkey
+                            fighter_whip_trail.append(fighter_current_pos)
+                            if len(fighter_whip_trail) > fig_trail_history_size:
+                                fighter_whip_trail.pop(0)
+                    else:
+                        fighter_whip_trail.clear()
+                        fighter_whip_trail_key = None
+                else:
+                    fighter_active = False
+                    def draw_fighter_sprite(): pass
+
+                # ★ 攻撃中の味方キャラ（ヒロイン:whip_active／サムライ:samurai_active／女戦士:warrior_active等）を、
                 # 他のキャラより奥（先）に描画することで、攻撃のための移動時に手前のキャラと重なって不自然にならないようにする
-                # （マカダンス中はヒロインが画面下に消えているため、サムライ・女戦士のみ描画する）
+                # （マカダンス中はヒロインが画面下に消えているため、サムライ・その他のみ描画する）
+                def _draw_non_attacker_sprites(skip_fn):
+                    for fn in [draw_heroine_sprite, draw_samurai_sprite, draw_warrior_sprite,
+                                draw_sister_sprite, draw_kunoichi_sprite, draw_wizard_sprite, draw_fighter_sprite]:
+                        if fn is not skip_fn:
+                            fn()
+
                 if dance_active:
                     draw_samurai_sprite()
                     draw_warrior_sprite()
+                    draw_sister_sprite()
+                    draw_kunoichi_sprite()
+                    draw_wizard_sprite()
+                    draw_fighter_sprite()
+                elif whip_active:
+                    draw_heroine_sprite()
+                    draw_samurai_sprite()
+                    draw_warrior_sprite()
+                    draw_sister_sprite()
+                    draw_kunoichi_sprite()
+                    draw_wizard_sprite()
+                    draw_fighter_sprite()
                 elif samurai_active:
                     draw_samurai_sprite()
                     draw_heroine_sprite()
                     draw_warrior_sprite()
+                    draw_sister_sprite()
+                    draw_kunoichi_sprite()
+                    draw_wizard_sprite()
+                    draw_fighter_sprite()
                 elif warrior_active:
                     draw_warrior_sprite()
                     draw_heroine_sprite()
                     draw_samurai_sprite()
+                    draw_sister_sprite()
+                    draw_kunoichi_sprite()
+                    draw_wizard_sprite()
+                    draw_fighter_sprite()
+                elif sister_active:
+                    draw_sister_sprite()
+                    draw_heroine_sprite()
+                    draw_samurai_sprite()
+                    draw_warrior_sprite()
+                    draw_kunoichi_sprite()
+                    draw_wizard_sprite()
+                    draw_fighter_sprite()
+                elif kunoichi_active:
+                    draw_kunoichi_sprite()
+                    draw_heroine_sprite()
+                    draw_samurai_sprite()
+                    draw_warrior_sprite()
+                    draw_sister_sprite()
+                    draw_wizard_sprite()
+                    draw_fighter_sprite()
+                elif wizard_active:
+                    draw_wizard_sprite()
+                    draw_heroine_sprite()
+                    draw_samurai_sprite()
+                    draw_warrior_sprite()
+                    draw_sister_sprite()
+                    draw_kunoichi_sprite()
+                    draw_fighter_sprite()
+                elif fighter_active:
+                    draw_fighter_sprite()
+                    draw_heroine_sprite()
+                    draw_samurai_sprite()
+                    draw_warrior_sprite()
+                    draw_sister_sprite()
+                    draw_kunoichi_sprite()
+                    draw_wizard_sprite()
                 else:
                     draw_heroine_sprite()
                     draw_samurai_sprite()
                     draw_warrior_sprite()
+                    draw_sister_sprite()
+                    draw_kunoichi_sprite()
+                    draw_wizard_sprite()
+                    draw_fighter_sprite()
             else:
                 # ★ 攻撃中の味方キャラ（ヒロインの場合はwhip_active、サムライの場合はsamurai_active）を、
                 # もう一方のキャラより奥（先）に描画することで、攻撃のための移動時に手前のキャラと重なって不自然にならないようにする
@@ -3524,6 +4536,14 @@ def render_battle():
             render_battle_menu(get_samurai_menu_options(), battle_samurai_menu_selected_index)
         elif battle_phase == BATTLE_PHASE_COMMAND_WARRIOR:
             render_battle_menu(WARRIOR_MENU_OPTIONS, battle_warrior_menu_selected_index)
+        elif battle_phase == BATTLE_PHASE_COMMAND_SISTER:
+            render_battle_menu(SISTER_MENU_OPTIONS, battle_sister_menu_selected_index)
+        elif battle_phase == BATTLE_PHASE_COMMAND_KUNOICHI:
+            render_battle_menu(KUNOICHI_MENU_OPTIONS, battle_kunoichi_menu_selected_index)
+        elif battle_phase == BATTLE_PHASE_COMMAND_WIZARD:
+            render_battle_menu(WIZARD_MENU_OPTIONS, battle_wizard_menu_selected_index)
+        elif battle_phase == BATTLE_PHASE_COMMAND_FIGHTER:
+            render_battle_menu(FIGHTER_MENU_OPTIONS, battle_fighter_menu_selected_index)
 
 # ---------------------------------------------------------
 # render_battle_menu()：攻撃選択サブウィンドウの描画
@@ -3582,10 +4602,24 @@ def render_result():
         #   戦闘終了直前の表示位置・スケールをそのまま引き継ぐ。
         #   通常位置にスナップして見える違和感を防ぐため。例：ムチ・剣で最後の敵を倒した直後はリザルトの最接近位置を維持する）
         if result_flashout_is_warrior:
-            flashout_img_raw = warrior_back_img_raw
+            _ch = result_flashout_active_char
+            if _ch == -4:
+                flashout_img_raw = sister_back_img_raw
+                flashout_height_m = SISTER_HEIGHT_M
+            elif _ch == -5:
+                flashout_img_raw = kunoichi_back_img_raw
+                flashout_height_m = KUNOICHI_HEIGHT_M
+            elif _ch == -6:
+                flashout_img_raw = wizard_back_img_raw
+                flashout_height_m = WIZARD_HEIGHT_M
+            elif _ch == -7:
+                flashout_img_raw = fighter_back_img_raw
+                flashout_height_m = FIGHTER_HEIGHT_M
+            else:
+                flashout_img_raw = warrior_back_img_raw
+                flashout_height_m = WARRIOR_HEIGHT_M
             flashout_override = result_flashout_warrior_override
-            flashout_height_m = WARRIOR_HEIGHT_M
-            flashout_world_offset_m = battle_character_world_offset_m[-3]
+            flashout_world_offset_m = battle_character_world_offset_m[_ch]
         elif result_flashout_is_samurai:
             flashout_img_raw = samurai_back_img_raw
             flashout_override = result_flashout_samurai_override
@@ -3642,11 +4676,19 @@ def render_result():
         cx = int(start_cx + (end_cx - start_cx) * t_eased)
 
         if result_flashout_is_warrior:
-            # 女戦士（warrior_front.png）：画像上端からRESULT_WARRIOR_WIN_TOP_MARGIN_M分の位置が
-            # ゲームウィンドウ上端(band_y)に一致するように配置する
-            # （initialize()で一度だけ行ったスケールのまま、追加の拡縮は行わない）
             win_h = result_active_win_img.get_height()
-            top_margin_px = int(win_h * RESULT_WARRIOR_WIN_TOP_MARGIN_M / WARRIOR_HEIGHT_M) if WARRIOR_HEIGHT_M > 0 else 0
+            _ch = result_flashout_active_char
+            if _ch == -4:
+                _margin_m, _height_m = RESULT_SISTER_WIN_TOP_MARGIN_M, SISTER_HEIGHT_M
+            elif _ch == -5:
+                _margin_m, _height_m = RESULT_KUNOICHI_WIN_TOP_MARGIN_M, KUNOICHI_HEIGHT_M
+            elif _ch == -6:
+                _margin_m, _height_m = RESULT_WIZARD_WIN_TOP_MARGIN_M, WIZARD_HEIGHT_M
+            elif _ch == -7:
+                _margin_m, _height_m = RESULT_FIGHTER_WIN_TOP_MARGIN_M, FIGHTER_HEIGHT_M
+            else:
+                _margin_m, _height_m = RESULT_WARRIOR_WIN_TOP_MARGIN_M, WARRIOR_HEIGHT_M
+            top_margin_px = int(win_h * _margin_m / _height_m) if _height_m > 0 else 0
             img_rect = result_active_win_img.get_rect(midtop=(cx, band_y - top_margin_px))
         elif result_flashout_is_samurai:
             # サムライ（samurai_front.png）：画像上端からRESULT_SAMURAI_WIN_TOP_MARGIN_M分の位置が
