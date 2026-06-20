@@ -57,22 +57,22 @@ BATTLE_MAIN_WINDOW_HEIGHT_RATIO = 5 / 6  # ゲームウィンドウ高さ（SCRE
 BATTLE_MAIN_WINDOW_HEIGHT = int(SCREEN_H * BATTLE_MAIN_WINDOW_HEIGHT_RATIO)
 BATTLE_MAIN_WINDOW_ANIM_FRAMES = 10   # バトルメインウィンドウが開ききるまでのフレーム数
 
-# ヒロイン演出パラメータ：登場時／ズームアウト後それぞれについて、
+# 仲間キャラ演出パラメータ：登場時／ズームアウト後それぞれについて、
 # バトルウィンドウ幅（=SCREEN_W）がワールド座標系で何mに相当するかを指定する
 # （この値が小さいほど、ヒロインの身長(HEROINE_HEIGHT_M)に対して画像が大きく＝ズームインして表示される）
-BATTLE_HEROINE_FIRST_WINDOW_WIDTH_M = 20 / 27  # 登場時（ズームイン状態）
-BATTLE_HEROINE_LAST_WINDOW_WIDTH_M  = 95 / 27  # ズームアウト後
-BATTLE_HEROINE_FIRST_METER_TO_PIXEL = SCREEN_W / BATTLE_HEROINE_FIRST_WINDOW_WIDTH_M
-BATTLE_HEROINE_LAST_METER_TO_PIXEL  = SCREEN_W / BATTLE_HEROINE_LAST_WINDOW_WIDTH_M
+BATTLE_MEMBER_FIRST_WINDOW_WIDTH_M = 20 / 27  # 登場時（ズームイン状態）
+BATTLE_MEMBER_LAST_WINDOW_WIDTH_M  = 95 / 27  # ズームアウト後
+BATTLE_MEMBER_FIRST_METER_TO_PIXEL = SCREEN_W / BATTLE_MEMBER_FIRST_WINDOW_WIDTH_M
+BATTLE_MEMBER_LAST_METER_TO_PIXEL  = SCREEN_W / BATTLE_MEMBER_LAST_WINDOW_WIDTH_M
 
 # バトルウィンドウが開いた後の静止 → ズームアウト
-BATTLE_HEROINE_FOCUS_DELAY_FRAMES = 20  # 静止フレーム数
-BATTLE_HEROINE_ZOOMOUT_FRAMES = 60      # ズームアウトに要するフレーム数
+BATTLE_MEMBER_FOCUS_DELAY_FRAMES = 20  # 静止フレーム数
+BATTLE_MEMBER_ZOOMOUT_FRAMES = 60      # ズームアウトに要するフレーム数
 # 注視キャラの足元Y位置：画面下端から画面高さの何倍上の位置か（ENEMY_GROUND_Y_FROM_BOTTOM_RATIOと同じ定義方式）
 # 算出式：foot_y = SCREEN_H - int(SCREEN_H * ratio)
 # 負値は足元が画面下端より下（画面外）にあることを意味する
-BATTLE_HEROINE_FIRST_GROUND_Y_FROM_BOTTOM_RATIO = 1/12   # 登場直後：バトルウィンドウ下端に足元が来る
-BATTLE_HEROINE_LAST_GROUND_Y_FROM_BOTTOM_RATIO  = -1/3   # ズームアウト完了後：足元が画面下端の1/3画面分下（腰あたりが下端に来る）
+BATTLE_MEMBER_FIRST_GROUND_Y_FROM_BOTTOM_RATIO = 1/12   # 登場直後：バトルウィンドウ下端に足元が来る
+BATTLE_MEMBER_LAST_GROUND_Y_FROM_BOTTOM_RATIO  = -1/3   # ズームアウト完了後：足元が画面下端の1/3画面分下（腰あたりが下端に来る）
 
 # バトルウィンドウ色
 BATTLE_WINDOW_COLOR = (30, 80, 200)  # バトル中のウィンドウ色
@@ -176,8 +176,8 @@ AI_RESULT_ENTER_FRAMES = 60  # リザルト画面：勝利BGM再生開始からE
 AI_FIELD_BATTLE_START_FRAMES = 90  # フィールドモード：経過後にEキー相当の入力を行いバトルを開始するまでのフレーム数
 
 # ズームアウト後の待機モーション（縦横逆位相スクワッシュ）
-BATTLE_HEROINE_IDLE_PERIOD_FRAMES = 30  # 拡縮1周期のフレーム数
-BATTLE_HEROINE_IDLE_SCALE_DELTA   = 0.02  # 縦横スケールの振れ幅（1.0 ± DELTA）
+BATTLE_MEMBER_IDLE_PERIOD_FRAMES = 30  # 拡縮1周期のフレーム数
+BATTLE_MEMBER_IDLE_SCALE_DELTA   = 0.02  # 縦横スケールの振れ幅（1.0 ± DELTA）
 
 # 敵キャラクター演出パラメータ：登場時／ズームアウト後それぞれについて、
 # 敵位置にて、バトルウィンドウ幅（=SCREEN_W）がワールド座標系で何mに相当するかを指定する
@@ -362,11 +362,11 @@ STATUS_METER_TO_PIXEL = SCREEN_W / STATUS_WINDOW_WIDTH_M
 STATUS_CHARACTER_SPACING_M = 0.5
 
 battle_anim_frame = 0
-heroine_focus_delay_frame = 0
-heroine_zoomout_frame = 0
+member_focus_delay_frame = 0
+member_zoomout_frame = 0
 battle_focus_character = -1  # ズームアウトで注視するキャラクター（-1=ヒロイン, -2=サムライ, -3=女戦士。エンカウント毎にランダム決定）
-heroine_idle_frame       = 0
-heroine_idle_phase_offset = 0  # 待機モーションの位相ずらし（フレーム数。エンカウント毎にランダム決定）
+member_idle_frame       = 0
+member_idle_phase_offset = 0  # 待機モーションの位相ずらし（フレーム数。エンカウント毎にランダム決定）
 enemy_silhouette_frame   = 0
 enemy_idle_frame         = 0
 enemy_idle_phase_offsets = [0, 0, 0]  # 敵1体ごとの待機モーション位相ずらし（フレーム数。エンカウント毎にランダム決定）
@@ -1469,7 +1469,7 @@ def initialize():
 
     battle_back_img_raw = raw_img  # オリジナルを保持
 
-    target_h = int(HEROINE_HEIGHT_M * BATTLE_HEROINE_FIRST_METER_TO_PIXEL)
+    target_h = int(HEROINE_HEIGHT_M * BATTLE_MEMBER_FIRST_METER_TO_PIXEL)
     scale = target_h / orig_h
 
     battle_back_img = pygame.transform.smoothscale(
@@ -1615,9 +1615,9 @@ def initialize():
 #   攻防フェーズではズームアウトが完了している（focus_t_eased == 1.0）ため、LAST側の定数のみで算出できる）
 # ---------------------------------------------------------
 def get_samurai_base_position():
-    sam_base_bottom_y = SCREEN_H - int(SCREEN_H * BATTLE_HEROINE_LAST_GROUND_Y_FROM_BOTTOM_RATIO)
-    sam_base_img_h = max(1, int(SAMURAI_HEIGHT_M * BATTLE_HEROINE_LAST_METER_TO_PIXEL))
-    sam_base_x = SCREEN_W // 2 + int(battle_character_world_offset_m[-2] * BATTLE_HEROINE_LAST_METER_TO_PIXEL)
+    sam_base_bottom_y = SCREEN_H - int(SCREEN_H * BATTLE_MEMBER_LAST_GROUND_Y_FROM_BOTTOM_RATIO)
+    sam_base_img_h = max(1, int(SAMURAI_HEIGHT_M * BATTLE_MEMBER_LAST_METER_TO_PIXEL))
+    sam_base_x = SCREEN_W // 2 + int(battle_character_world_offset_m[-2] * BATTLE_MEMBER_LAST_METER_TO_PIXEL)
     return sam_base_x, sam_base_bottom_y, sam_base_img_h
 
 # ---------------------------------------------------------
@@ -1893,7 +1893,7 @@ def result_to_field():
 def start_battle():
     # フィールドからバトルを開始する（Eキー相当）：各種バトル状態を初期化する
     global game_state, battle_anim_frame
-    global heroine_focus_delay_frame, heroine_zoomout_frame, heroine_idle_frame, heroine_idle_phase_offset
+    global member_focus_delay_frame, member_zoomout_frame, member_idle_frame, member_idle_phase_offset
     global battle_party, battle_focus_character, battle_command_phase_order, battle_character_world_offset_m
     global enemy_silhouette_frame, enemy_idle_frame, enemy_idle_phase_offsets
     global battle_flashout_frame, result_white_delay_frame, result_slidein_frame
@@ -1928,10 +1928,10 @@ def start_battle():
 
     game_state = STATE_BATTLE
     battle_anim_frame = 0
-    heroine_focus_delay_frame = 0
-    heroine_zoomout_frame = 0
-    heroine_idle_frame = 0
-    heroine_idle_phase_offset = random.randint(0, BATTLE_HEROINE_IDLE_PERIOD_FRAMES - 1)
+    member_focus_delay_frame = 0
+    member_zoomout_frame = 0
+    member_idle_frame = 0
+    member_idle_phase_offset = random.randint(0, BATTLE_MEMBER_IDLE_PERIOD_FRAMES - 1)
     # ★ 参戦する仲間キャラを決定する（デバッグモード: サムライのみ、通常: 全7キャラ）
     battle_party = [-2] if is_debug else [-1, -2, -3, -4, -5, -6, -7]
     # ★ ズームアウトの注視先：参戦キャラからランダムに決定する
@@ -2091,7 +2091,7 @@ def process_ai_battle_input():
                 ai_result_wait_frame = 0
         return
 
-    if game_state != STATE_BATTLE or heroine_zoomout_frame < BATTLE_HEROINE_ZOOMOUT_FRAMES:
+    if game_state != STATE_BATTLE or member_zoomout_frame < BATTLE_MEMBER_ZOOMOUT_FRAMES:
         return
 
     all_command_phases = (BATTLE_PHASE_COMMAND_HEROINE, BATTLE_PHASE_COMMAND_SAMURAI, BATTLE_PHASE_COMMAND_WARRIOR,
@@ -2264,12 +2264,12 @@ def process_input():
                     BATTLE_PHASE_COMMAND_SISTER, BATTLE_PHASE_COMMAND_KUNOICHI,
                     BATTLE_PHASE_COMMAND_WIZARD, BATTLE_PHASE_COMMAND_FIGHTER)
         if event.type == pygame.KEYDOWN and event.key == pygame.K_UP and not is_paused and not ai_mode_active:
-            if (game_state == STATE_BATTLE and heroine_zoomout_frame >= BATTLE_HEROINE_ZOOMOUT_FRAMES
+            if (game_state == STATE_BATTLE and member_zoomout_frame >= BATTLE_MEMBER_ZOOMOUT_FRAMES
                     and battle_phase in _all_cmd):
                 battle_menu_cursor_step(-1)
 
         if event.type == pygame.KEYDOWN and event.key == pygame.K_DOWN and not is_paused and not ai_mode_active:
-            if (game_state == STATE_BATTLE and heroine_zoomout_frame >= BATTLE_HEROINE_ZOOMOUT_FRAMES
+            if (game_state == STATE_BATTLE and member_zoomout_frame >= BATTLE_MEMBER_ZOOMOUT_FRAMES
                     and battle_phase in _all_cmd):
                 battle_menu_cursor_step(1)
 
@@ -2281,17 +2281,17 @@ def process_input():
         # ムチ／剣選択中：左右キーで攻撃対象の敵を変更（ズームアウト完了後・コマンド選択中のみ。撃破済みの敵は選択をスキップする。
         # システムポーズ中・AIユーザモード中は無効）
         if event.type == pygame.KEYDOWN and event.key == pygame.K_LEFT and not is_paused and not ai_mode_active:
-            if game_state == STATE_BATTLE and heroine_zoomout_frame >= BATTLE_HEROINE_ZOOMOUT_FRAMES:
+            if game_state == STATE_BATTLE and member_zoomout_frame >= BATTLE_MEMBER_ZOOMOUT_FRAMES:
                 battle_target_cursor_step(-1)
 
         if event.type == pygame.KEYDOWN and event.key == pygame.K_RIGHT and not is_paused and not ai_mode_active:
-            if game_state == STATE_BATTLE and heroine_zoomout_frame >= BATTLE_HEROINE_ZOOMOUT_FRAMES:
+            if game_state == STATE_BATTLE and member_zoomout_frame >= BATTLE_MEMBER_ZOOMOUT_FRAMES:
                 battle_target_cursor_step(1)
 
         # Enterキー：ヒロインの行動選択 → サムライの行動選択 → 攻防ステートへ遷移（コマンドウィンドウは非表示）／リザルト画面からフィールドへ
         # （システムポーズ中は意図しない進行を防ぐため無効。バトル・リザルトでのこの操作はAIユーザモード中も無効＝AI側が自動で行う）
         if event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN and not is_paused:
-            if (not ai_mode_active and game_state == STATE_BATTLE and heroine_zoomout_frame >= BATTLE_HEROINE_ZOOMOUT_FRAMES
+            if (not ai_mode_active and game_state == STATE_BATTLE and member_zoomout_frame >= BATTLE_MEMBER_ZOOMOUT_FRAMES
                     and battle_phase in _all_cmd):
                 battle_command_confirm()
             elif not ai_mode_active and game_state == STATE_RESULT:
@@ -2304,7 +2304,7 @@ def process_input():
         if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE and not is_paused:
             if game_state == STATE_STATUS and status_phase == STATUS_PHASE_OPEN:
                 status_phase = STATUS_PHASE_CLOSING
-            elif (not ai_mode_active and game_state == STATE_BATTLE and heroine_zoomout_frame >= BATTLE_HEROINE_ZOOMOUT_FRAMES
+            elif (not ai_mode_active and game_state == STATE_BATTLE and member_zoomout_frame >= BATTLE_MEMBER_ZOOMOUT_FRAMES
                     and battle_phase != battle_command_phase_order[0] and battle_phase in battle_command_phase_order):
                 idx = battle_command_phase_order.index(battle_phase)
                 battle_phase = battle_command_phase_order[idx - 1]
@@ -2361,7 +2361,7 @@ def process_input():
 def update(dt):
     global player_world_x, player_world_y
     global game_state
-    global battle_anim_frame, heroine_focus_delay_frame, heroine_zoomout_frame, heroine_idle_frame
+    global battle_anim_frame, member_focus_delay_frame, member_zoomout_frame, member_idle_frame
     global enemy_silhouette_frame, enemy_idle_frame
     global battle_flashout_frame, result_white_delay_frame, result_slidein_frame
     global result_text_delay_frame, result_text_frame
@@ -2475,13 +2475,13 @@ def update(dt):
             return
 
         # ② 静止フレーム
-        if heroine_focus_delay_frame < BATTLE_HEROINE_FOCUS_DELAY_FRAMES:
-            heroine_focus_delay_frame += 1
+        if member_focus_delay_frame < BATTLE_MEMBER_FOCUS_DELAY_FRAMES:
+            member_focus_delay_frame += 1
             return
 
         # ③ ズームアウト：静止が完了した瞬間にかけ声をランダムに選んで再生（注視先に応じてヒロイン／サムライ／女戦士のかけ声を切り替える）
         # 　　また、この瞬間から戦闘曲（battle2.mp3）を再生する
-        if heroine_zoomout_frame == 0:
+        if member_zoomout_frame == 0:
             sound_battle2_bgm.play(loops=-1)
             if battle_focus_character == -3:
                 play_warrior_battle_start_voice()
@@ -2497,12 +2497,12 @@ def update(dt):
                 play_samurai_battle_start_voice()
             else:
                 play_battle_start_voice()
-        if heroine_zoomout_frame < BATTLE_HEROINE_ZOOMOUT_FRAMES:
-            heroine_zoomout_frame += 1
+        if member_zoomout_frame < BATTLE_MEMBER_ZOOMOUT_FRAMES:
+            member_zoomout_frame += 1
             return
 
         # ④ 待機モーション（無限ループ）／敵の黒シルエット解除と待機モーション／攻撃対象カーソルの点滅
-        heroine_idle_frame += 1
+        member_idle_frame += 1
         if enemy_silhouette_frame < ENEMY_SILHOUETTE_RELEASE_FRAMES:
             enemy_silhouette_frame += 1
         enemy_idle_frame += 1
@@ -3429,14 +3429,14 @@ def render_battle():
     # （敵の攻撃接近先の算出に、各キャラの描画より先に必要となるため）
     # ズームアウトのカメラは、battle_focus_character に応じてヒロイン・サムライ・女戦士のいずれかの足元に注視する。
     # 他のキャラは、ワールド座標系での相対位置（ヒロインを基準に、サムライは1m右・女戦士は2m右）を保ったまま表示する
-    focus_t_zoom = min(1.0, heroine_zoomout_frame / BATTLE_HEROINE_ZOOMOUT_FRAMES) \
-                   if BATTLE_HEROINE_ZOOMOUT_FRAMES > 0 else 1.0
+    focus_t_zoom = min(1.0, member_zoomout_frame / BATTLE_MEMBER_ZOOMOUT_FRAMES) \
+                   if BATTLE_MEMBER_ZOOMOUT_FRAMES > 0 else 1.0
     focus_t_eased = 1.0 - (1.0 - focus_t_zoom) ** 2
-    focus_meter_to_pixel_start = BATTLE_HEROINE_FIRST_METER_TO_PIXEL
-    focus_meter_to_pixel_end   = BATTLE_HEROINE_LAST_METER_TO_PIXEL
+    focus_meter_to_pixel_start = BATTLE_MEMBER_FIRST_METER_TO_PIXEL
+    focus_meter_to_pixel_end   = BATTLE_MEMBER_LAST_METER_TO_PIXEL
     focus_meter_to_pixel = focus_meter_to_pixel_start + (focus_meter_to_pixel_end - focus_meter_to_pixel_start) * focus_t_eased
-    focus_bottom_y_start = SCREEN_H - int(SCREEN_H * BATTLE_HEROINE_FIRST_GROUND_Y_FROM_BOTTOM_RATIO)
-    focus_bottom_y_end   = SCREEN_H - int(SCREEN_H * BATTLE_HEROINE_LAST_GROUND_Y_FROM_BOTTOM_RATIO)
+    focus_bottom_y_start = SCREEN_H - int(SCREEN_H * BATTLE_MEMBER_FIRST_GROUND_Y_FROM_BOTTOM_RATIO)
+    focus_bottom_y_end   = SCREEN_H - int(SCREEN_H * BATTLE_MEMBER_LAST_GROUND_Y_FROM_BOTTOM_RATIO)
     focus_bottom_y = int(focus_bottom_y_start + (focus_bottom_y_end - focus_bottom_y_start) * focus_t_eased)
 
     heroine_base_img_h = max(1, int(HEROINE_HEIGHT_M * focus_meter_to_pixel))
@@ -3530,8 +3530,8 @@ def render_battle():
         enemy_orig_w, enemy_orig_h = enemy_img_raw.get_size()
 
         # ズームアウト進行度（0.0 → 1.0）：ヒロインと同じタイミングで指定スケールへ収束
-        enemy_t_zoom = min(1.0, heroine_zoomout_frame / BATTLE_HEROINE_ZOOMOUT_FRAMES) \
-                       if BATTLE_HEROINE_ZOOMOUT_FRAMES > 0 else 1.0
+        enemy_t_zoom = min(1.0, member_zoomout_frame / BATTLE_MEMBER_ZOOMOUT_FRAMES) \
+                       if BATTLE_MEMBER_ZOOMOUT_FRAMES > 0 else 1.0
         enemy_t_eased = 1.0 - (1.0 - enemy_t_zoom) ** 2
 
         enemy_start_img_h = int(ENEMY_GOBLIN_HEIGHT_M * ENEMY_GOBLIN_FIRST_METER_TO_PIXEL)
@@ -3618,7 +3618,7 @@ def render_battle():
                 target_img_h = max(1, int(enemy_img_h + (attack_target_img_h - enemy_img_h) * enemy_attack_t))
                 target_img_w = max(1, int(enemy_orig_w * target_img_h / enemy_orig_h))
                 final_img_w, final_img_h = target_img_w, target_img_h
-            elif heroine_zoomout_frame >= BATTLE_HEROINE_ZOOMOUT_FRAMES:
+            elif member_zoomout_frame >= BATTLE_MEMBER_ZOOMOUT_FRAMES:
                 # 待機モーション：縦横逆位相スクワッシュ（ズームアウト完了後・攻撃中以外のみ適用）
                 # 個体ごとに位相をランダムにずらし、3体が同期して動かないようにする（周期はENEMY_IDLE_PERIOD_FRAMESで共通）
                 phase = enemy_idle_phase_offsets[i] if i < len(enemy_idle_phase_offsets) else 0
@@ -3693,7 +3693,7 @@ def render_battle():
         # サムライの剣選択中：左右キーで選んだ対象1体のみ
         # HPデバッグ表示と被らないよう、頭上のクリアランスにテキスト分の高さも加味して上方へ表示する
         cursor_target_indices = []
-        if heroine_zoomout_frame >= BATTLE_HEROINE_ZOOMOUT_FRAMES:
+        if member_zoomout_frame >= BATTLE_MEMBER_ZOOMOUT_FRAMES:
             if battle_phase == BATTLE_PHASE_COMMAND_HEROINE and battle_menu_selected_index in (BATTLE_MENU_INDEX_WHIP, BATTLE_MENU_INDEX_FLAME):
                 if battle_menu_selected_index == BATTLE_MENU_INDEX_WHIP:
                     cursor_target_indices = [battle_target_enemy_index] if 0 <= battle_target_enemy_index < len(enemy_rects) else []
@@ -3767,10 +3767,10 @@ def render_battle():
 
         # ④ 待機モーション：縦横逆位相スクワッシュ（ズームアウト完了後・ムチ演出中以外で適用、エンカウント毎に位相をランダムにずらす）
         # （サムライ等の仲間キャラにも同じスケールを適用するため、idle_sx/idle_syは関係なくここで算出する）
-        idle_active = heroine_zoomout_frame >= BATTLE_HEROINE_ZOOMOUT_FRAMES and not whip_active
-        idle_t  = math.sin((heroine_idle_frame + heroine_idle_phase_offset) / BATTLE_HEROINE_IDLE_PERIOD_FRAMES * 2 * math.pi)
-        idle_sx = 1.0 + BATTLE_HEROINE_IDLE_SCALE_DELTA * idle_t   # 横：+側で膨らむ
-        idle_sy = 1.0 - BATTLE_HEROINE_IDLE_SCALE_DELTA * idle_t   # 縦：横と逆位相
+        idle_active = member_zoomout_frame >= BATTLE_MEMBER_ZOOMOUT_FRAMES and not whip_active
+        idle_t  = math.sin((member_idle_frame + member_idle_phase_offset) / BATTLE_MEMBER_IDLE_PERIOD_FRAMES * 2 * math.pi)
+        idle_sx = 1.0 + BATTLE_MEMBER_IDLE_SCALE_DELTA * idle_t   # 横：+側で膨らむ
+        idle_sy = 1.0 - BATTLE_MEMBER_IDLE_SCALE_DELTA * idle_t   # 縦：横と逆位相
         final_img_w, final_img_h = img_w, img_h
         if idle_active:
             final_img_w = max(1, int(img_w * idle_sx))
@@ -4546,7 +4546,7 @@ def render_battle():
         screen.set_clip(None)
 
     # ★ 攻撃選択サブウィンドウ（ズームアウト完了後・コマンド選択中のみ表示。攻防ステート中は非表示）
-    if heroine_zoomout_frame >= BATTLE_HEROINE_ZOOMOUT_FRAMES:
+    if member_zoomout_frame >= BATTLE_MEMBER_ZOOMOUT_FRAMES:
         if battle_phase == BATTLE_PHASE_COMMAND_HEROINE:
             render_battle_menu(BATTLE_MENU_OPTIONS, battle_menu_selected_index)
         elif battle_phase == BATTLE_PHASE_COMMAND_SAMURAI:
@@ -4649,16 +4649,16 @@ def render_result():
             flashout_override = result_flashout_heroine_override
             flashout_height_m = HEROINE_HEIGHT_M
             flashout_world_offset_m = battle_character_world_offset_m[-1]
-        flashout_default_x = SCREEN_W // 2 + int(flashout_world_offset_m * BATTLE_HEROINE_LAST_METER_TO_PIXEL)
+        flashout_default_x = SCREEN_W // 2 + int(flashout_world_offset_m * BATTLE_MEMBER_LAST_METER_TO_PIXEL)
 
         if flashout_img_raw:
             orig_w, orig_h = flashout_img_raw.get_size()
             if flashout_override:
                 x, boty, h = flashout_override
             else:
-                h = int(flashout_height_m * BATTLE_HEROINE_LAST_METER_TO_PIXEL)
+                h = int(flashout_height_m * BATTLE_MEMBER_LAST_METER_TO_PIXEL)
                 x = flashout_default_x
-                boty = SCREEN_H - int(SCREEN_H * BATTLE_HEROINE_LAST_GROUND_Y_FROM_BOTTOM_RATIO)
+                boty = SCREEN_H - int(SCREEN_H * BATTLE_MEMBER_LAST_GROUND_Y_FROM_BOTTOM_RATIO)
             w = max(1, int(orig_w * h / orig_h))
             img = pygame.transform.smoothscale(flashout_img_raw, (w, h))
             alpha_img = img.copy()
