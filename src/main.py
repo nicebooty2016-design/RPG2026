@@ -68,10 +68,11 @@ BATTLE_HEROINE_LAST_METER_TO_PIXEL  = SCREEN_W / BATTLE_HEROINE_LAST_WINDOW_WIDT
 # バトルウィンドウが開いた後の静止 → ズームアウト
 BATTLE_HEROINE_FOCUS_DELAY_FRAMES = 20  # 静止フレーム数
 BATTLE_HEROINE_ZOOMOUT_FRAMES = 60      # ズームアウトに要するフレーム数
-# 注視点：ヒロインの足元から何m上の位置（＝ワールド座標系の高さ。結果的に体の特定の部位を指す）が
-# バトルウィンドウ下端に来るか。登場直後／ズームアウト完了直後それぞれで指定する
-BATTLE_HEROINE_FIRST_FOCUS_M = 0  # 登場直後
-BATTLE_HEROINE_LAST_FOCUS_M  = 1.1    # ズームアウト完了直後
+# 注視キャラの足元Y位置：画面下端から画面高さの何倍上の位置か（ENEMY_GROUND_Y_FROM_BOTTOM_RATIOと同じ定義方式）
+# 算出式：foot_y = SCREEN_H - int(SCREEN_H * ratio)
+# 負値は足元が画面下端より下（画面外）にあることを意味する
+BATTLE_HEROINE_FIRST_GROUND_Y_FROM_BOTTOM_RATIO = 1/12   # 登場直後：バトルウィンドウ下端に足元が来る
+BATTLE_HEROINE_LAST_GROUND_Y_FROM_BOTTOM_RATIO  = -1/3   # ズームアウト完了後：足元が画面下端の1/3画面分下（腰あたりが下端に来る）
 
 # バトルウィンドウ色
 BATTLE_WINDOW_COLOR = (30, 80, 200)  # バトル中のウィンドウ色
@@ -1614,8 +1615,7 @@ def initialize():
 #   攻防フェーズではズームアウトが完了している（focus_t_eased == 1.0）ため、LAST側の定数のみで算出できる）
 # ---------------------------------------------------------
 def get_samurai_base_position():
-    band_bottom_full = SCREEN_H // 2 - BATTLE_MAIN_WINDOW_HEIGHT // 2 + BATTLE_MAIN_WINDOW_HEIGHT
-    sam_base_bottom_y = band_bottom_full + int(BATTLE_HEROINE_LAST_FOCUS_M * BATTLE_HEROINE_LAST_METER_TO_PIXEL)
+    sam_base_bottom_y = SCREEN_H - int(SCREEN_H * BATTLE_HEROINE_LAST_GROUND_Y_FROM_BOTTOM_RATIO)
     sam_base_img_h = max(1, int(SAMURAI_HEIGHT_M * BATTLE_HEROINE_LAST_METER_TO_PIXEL))
     sam_base_x = SCREEN_W // 2 + int(battle_character_world_offset_m[-2] * BATTLE_HEROINE_LAST_METER_TO_PIXEL)
     return sam_base_x, sam_base_bottom_y, sam_base_img_h
@@ -3435,8 +3435,8 @@ def render_battle():
     focus_meter_to_pixel_start = BATTLE_HEROINE_FIRST_METER_TO_PIXEL
     focus_meter_to_pixel_end   = BATTLE_HEROINE_LAST_METER_TO_PIXEL
     focus_meter_to_pixel = focus_meter_to_pixel_start + (focus_meter_to_pixel_end - focus_meter_to_pixel_start) * focus_t_eased
-    focus_bottom_y_start = band_bottom_full + int(BATTLE_HEROINE_FIRST_FOCUS_M * BATTLE_HEROINE_FIRST_METER_TO_PIXEL)
-    focus_bottom_y_end   = band_bottom_full + int(BATTLE_HEROINE_LAST_FOCUS_M * BATTLE_HEROINE_LAST_METER_TO_PIXEL)
+    focus_bottom_y_start = SCREEN_H - int(SCREEN_H * BATTLE_HEROINE_FIRST_GROUND_Y_FROM_BOTTOM_RATIO)
+    focus_bottom_y_end   = SCREEN_H - int(SCREEN_H * BATTLE_HEROINE_LAST_GROUND_Y_FROM_BOTTOM_RATIO)
     focus_bottom_y = int(focus_bottom_y_start + (focus_bottom_y_end - focus_bottom_y_start) * focus_t_eased)
 
     heroine_base_img_h = max(1, int(HEROINE_HEIGHT_M * focus_meter_to_pixel))
@@ -4658,7 +4658,7 @@ def render_result():
             else:
                 h = int(flashout_height_m * BATTLE_HEROINE_LAST_METER_TO_PIXEL)
                 x = flashout_default_x
-                boty = band_bottom + int(BATTLE_HEROINE_LAST_FOCUS_M * BATTLE_HEROINE_LAST_METER_TO_PIXEL)
+                boty = SCREEN_H - int(SCREEN_H * BATTLE_HEROINE_LAST_GROUND_Y_FROM_BOTTOM_RATIO)
             w = max(1, int(orig_w * h / orig_h))
             img = pygame.transform.smoothscale(flashout_img_raw, (w, h))
             alpha_img = img.copy()
