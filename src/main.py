@@ -4025,10 +4025,7 @@ def render_battle():
                     sam_img.fill(BATTLE_DANCE_SAMURAI_FLASH_COLOR, special_flags=pygame.BLEND_RGB_ADD)
 
             # ★ 残像（接近・後退中のみ）：ヒロインのムチと同じ仕組みを再利用する
-            # 音速剣ワープ後の最初フレームは接近フェーズの残像をクリアして、接近→ワープの視覚的な断絶を演出する
-            if sonicken_active and battle_samurai_whip_phase == BATTLE_WHIP_PHASE_RETURN and battle_samurai_whip_frame == 0:
-                samurai_whip_trail.clear()
-                samurai_whip_trail_key = None
+            # 音速剣のワープ後は接近フェーズの残像がそのまま引き継がれ、テレポート直後の「残像が一瞬漂う」演出になる
             sword_moving = (sword_active or sonicken_active) and battle_samurai_whip_phase in (BATTLE_WHIP_PHASE_APPROACH, BATTLE_WHIP_PHASE_RETURN)
             sam_current_pos = (sam_x, sam_bottom_y, sam_img_h)
             sam_trail_history_size = max(BATTLE_WHIP_TRAIL_OFFSET_1, BATTLE_WHIP_TRAIL_OFFSET_2)
