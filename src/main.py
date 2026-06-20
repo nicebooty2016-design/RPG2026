@@ -324,7 +324,7 @@ SHINGANKEN_ATTACK_VOICE_WAIT_FRAMES = 60  # 暗転完了後、攻撃発生のか
 SHINGANKEN_WAIT_FRAMES = SHINGANKEN_DARKEN_FRAMES + SHINGANKEN_ATTACK_VOICE_WAIT_FRAMES  # 開始から1回目の斬撃が始まるまでのフレーム数（その場で待機）
 SHINGANKEN_SLASH_INTERVAL_FRAMES = 8   # 各斬撃の開始間隔フレーム数
 SHINGANKEN_END_DELAY_FRAMES = SHINGANKEN_DARKEN_FRAMES  # 最後の斬撃開始から攻撃終了までのフレーム数（暗転解除が完了するのに合わせる）
-SHINGANKEN_DAMAGE = 500                # 与えるダメージ（最後の斬撃の軌跡先端到達時に一括適用）
+SHINGANKEN_DAMAGE = 80                 # 与えるダメージ（最後の斬撃の軌跡先端到達時に一括適用）
 SHINGANKEN_DARKEN_MAX_ALPHA = 255      # 暗転時の最大アルファ値（255=完全に黒で覆う）
 
 # 音速剣：帰還後に発動するランダム斬撃シーケンス（暗転なし）
@@ -2602,7 +2602,7 @@ def update(dt):
                                                         killed_enemy_index=target)
 
                             if (not all(enemy_defeated)
-                                    and battle_shingan_frame >= last_slash_start_frame + SHINGANKEN_END_DELAY_FRAMES):
+                                    and battle_shingan_frame >= last_slash_start_frame + max(SHINGANKEN_END_DELAY_FRAMES, SHINGANKEN_SLASH_TOTAL_FRAMES)):
                                 battle_samurai_target_enemy_index = find_alive_enemy_index(battle_samurai_target_enemy_index, 1)
                                 advance_battle_turn()
                         else:
