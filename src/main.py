@@ -47,6 +47,22 @@ def set_titlebar_color(rgb):
     except Exception:
         pass
 
+def _load_game_parameters():
+    import csv
+    _path = os.path.join(os.path.dirname(__file__), '..', 'assets', 'game_parameters.csv')
+    result = {}
+    try:
+        with open(_path, encoding='utf-8', newline='') as _f:
+            for _row in csv.DictReader(_f):
+                _id = (_row.get('ID') or '').strip()
+                if _id:
+                    result[_id] = (_row.get('Value') or '').strip()
+    except FileNotFoundError:
+        pass
+    return result
+
+_GAME_PARAMS = _load_game_parameters()
+
 # ---------------------------------------------------------
 # ★ 調整可能な定数（演出パラメータ）
 # ---------------------------------------------------------
@@ -360,7 +376,7 @@ STATUS_METER_TO_PIXEL = SCREEN_W / STATUS_WINDOW_WIDTH_M
 # 隣り合うキャラの足元中心の横方向の間隔（ワールド座標・メートル）
 # N人均等配置時の端のキャラ位置：画面中央 ± (N-1)/2 * spacing_px
 # 7人の場合：cx ± 3s（s=spacing_px）。端キャラが画面内に収まるよう調整する
-STATUS_CHARACTER_SPACING_M = 0.5
+STATUS_CHARACTER_SPACING_M = float(_GAME_PARAMS.get('STATUS_CHARACTER_SPACING_M', 0.5))
 
 battle_anim_frame = 0
 member_focus_delay_frame = 0
@@ -4775,8 +4791,7 @@ def render_status():
     screen.blit(overlay, (0, band_y))
 
     # ★ 全仲間キャラを身長に応じたサイズで、足元をウィンドウ下端に揃えて均等配置で表示する
-    # 7人の配置（左から）：踊り子・サムライ・女戦士・シスター・くノ一・魔法使い・武道家
-    # 位置式：cx + i * spacing_px  (i = -3, -2, -1, 0, +1, +2, +3)
+    # 並び順・人数は master_data_charas.csv の行順（_CHARA_MASTER のキー順）に従う。
     # spacing_px はワールド座標 STATUS_CHARACTER_SPACING_M から算出。値を調整すると全員の間隔が変わる
     cx = SCREEN_W // 2
     spacing_px = int(STATUS_CHARACTER_SPACING_M * STATUS_METER_TO_PIXEL)
@@ -4784,106 +4799,38 @@ def render_status():
     clip_rect = pygame.Rect(0, band_y, SCREEN_W, current_height)
     screen.set_clip(clip_rect)
 
-    # ★ 上下キーで前姿／後ろ姿を切り替え（デフォルトは後ろ姿）
-    dancer_img_raw = dancer_front_img_raw if status_view == STATUS_VIEW_FRONT else battle_back_img_raw
-    if status_view == STATUS_VIEW_FRONT:
-        samurai_img_raw  = samurai_front_img_raw
-        warrior_img_raw  = warrior_front_img_raw
-        sister_img_raw   = sister_front_img_raw
-        kunoichi_img_raw = kunoichi_front_img_raw
-        wizard_img_raw   = wizard_front_img_raw
-        fighter_img_raw  = fighter_front_img_raw
-    else:
-        samurai_img_raw  = samurai_back_img_raw
-        warrior_img_raw  = warrior_back_img_raw
-        sister_img_raw   = sister_back_img_raw
-        kunoichi_img_raw = kunoichi_back_img_raw
-        wizard_img_raw   = wizard_back_img_raw
-        fighter_img_raw  = fighter_back_img_raw
+    # Name → (front_img_raw, back_img_raw, front_art_key, back_art_key)
+    # 新キャラ追加時はここに1行追加するだけでよい。並び順は CSV 側で管理する。
+    _char_imgs = {
+        'Dancer':   (dancer_front_img_raw,   battle_back_img_raw,    'bunny_front.png',    'bunny_back.png'),
+        'Samurai':  (samurai_front_img_raw,  samurai_back_img_raw,   'samurai_front.png',  'samurai_back.png'),
+        'Warrior':  (warrior_front_img_raw,  warrior_back_img_raw,   'warrior_front.png',  'warrior_back.png'),
+        'Sister':   (sister_front_img_raw,   sister_back_img_raw,    'sister_front.png',   'sister_back.png'),
+        'Wizard':   (wizard_front_img_raw,   wizard_back_img_raw,    'wizard_front.png',   'wizard_back.png'),
+        'Fighter':  (fighter_front_img_raw,  fighter_back_img_raw,   'fighter_front.png',  'fighter_back.png'),
+        'Kunoichi': (kunoichi_front_img_raw, kunoichi_back_img_raw,  'kunoichi_front.png', 'kunoichi_back.png'),
+    }
+    is_front = (status_view == STATUS_VIEW_FRONT)
 
-    if dancer_img_raw:
-        img_h = int(DANCER_HEIGHT_M * STATUS_METER_TO_PIXEL)
-        orig_w, orig_h = dancer_img_raw.get_size()
+    chars = [name for name in _CHARA_MASTER if name in _char_imgs]
+    n = len(chars)
+    for idx, name in enumerate(chars):
+        front_raw, back_raw, front_key, back_key = _char_imgs[name]
+        img_raw = front_raw if is_front else back_raw
+        if not img_raw:
+            continue
+        height_m = _CHARA_MASTER[name]['height']
+        x = cx + int((idx - (n - 1) / 2) * spacing_px)
+        img_h = int(height_m * STATUS_METER_TO_PIXEL)
+        orig_w, orig_h = img_raw.get_size()
         img_w = max(1, int(orig_w * img_h / orig_h))
-        img = pygame.transform.smoothscale(dancer_img_raw, (img_w, img_h))
-        img_rect = img.get_rect(midbottom=(cx - 3 * spacing_px, band_bottom))
+        img = pygame.transform.smoothscale(img_raw, (img_w, img_h))
+        img_rect = img.get_rect(midbottom=(x, band_bottom))
         screen.blit(img, img_rect)
         if is_debug:
             pygame.draw.rect(screen, (255, 255, 255), img_rect, 1)
-            dancer_art_key = "bunny_front.png" if status_view == STATUS_VIEW_FRONT else "bunny_back.png"
-            draw_art_top_debug_line(dancer_art_key, DANCER_HEIGHT_M, band_bottom, img_h, img_rect.left, img_rect.right)
-
-    if samurai_img_raw:
-        img_h = int(SAMURAI_HEIGHT_M * STATUS_METER_TO_PIXEL)
-        orig_w, orig_h = samurai_img_raw.get_size()
-        img_w = max(1, int(orig_w * img_h / orig_h))
-        img = pygame.transform.smoothscale(samurai_img_raw, (img_w, img_h))
-        img_rect = img.get_rect(midbottom=(cx - 2 * spacing_px, band_bottom))
-        screen.blit(img, img_rect)
-        if is_debug:
-            pygame.draw.rect(screen, (255, 255, 255), img_rect, 1)
-            samurai_art_key = "samurai_front.png" if status_view == STATUS_VIEW_FRONT else "samurai_back.png"
-            draw_art_top_debug_line(samurai_art_key, SAMURAI_HEIGHT_M, band_bottom, img_h, img_rect.left, img_rect.right)
-
-    if warrior_img_raw:
-        img_h = int(WARRIOR_HEIGHT_M * STATUS_METER_TO_PIXEL)
-        orig_w, orig_h = warrior_img_raw.get_size()
-        img_w = max(1, int(orig_w * img_h / orig_h))
-        img = pygame.transform.smoothscale(warrior_img_raw, (img_w, img_h))
-        img_rect = img.get_rect(midbottom=(cx - spacing_px, band_bottom))
-        screen.blit(img, img_rect)
-        if is_debug:
-            pygame.draw.rect(screen, (255, 255, 255), img_rect, 1)
-            warrior_art_key = "warrior_front.png" if status_view == STATUS_VIEW_FRONT else "warrior_back.png"
-            draw_art_top_debug_line(warrior_art_key, WARRIOR_HEIGHT_M, band_bottom, img_h, img_rect.left, img_rect.right)
-
-    if sister_img_raw:
-        img_h = int(SISTER_HEIGHT_M * STATUS_METER_TO_PIXEL)
-        orig_w, orig_h = sister_img_raw.get_size()
-        img_w = max(1, int(orig_w * img_h / orig_h))
-        img = pygame.transform.smoothscale(sister_img_raw, (img_w, img_h))
-        img_rect = img.get_rect(midbottom=(cx, band_bottom))
-        screen.blit(img, img_rect)
-        if is_debug:
-            pygame.draw.rect(screen, (255, 255, 255), img_rect, 1)
-            sister_art_key = "sister_front.png" if status_view == STATUS_VIEW_FRONT else "sister_back.png"
-            draw_art_top_debug_line(sister_art_key, SISTER_HEIGHT_M, band_bottom, img_h, img_rect.left, img_rect.right)
-
-    if kunoichi_img_raw:
-        img_h = int(KUNOICHI_HEIGHT_M * STATUS_METER_TO_PIXEL)
-        orig_w, orig_h = kunoichi_img_raw.get_size()
-        img_w = max(1, int(orig_w * img_h / orig_h))
-        img = pygame.transform.smoothscale(kunoichi_img_raw, (img_w, img_h))
-        img_rect = img.get_rect(midbottom=(cx + spacing_px, band_bottom))
-        screen.blit(img, img_rect)
-        if is_debug:
-            pygame.draw.rect(screen, (255, 255, 255), img_rect, 1)
-            kunoichi_art_key = "kunoichi_front.png" if status_view == STATUS_VIEW_FRONT else "kunoichi_back.png"
-            draw_art_top_debug_line(kunoichi_art_key, KUNOICHI_HEIGHT_M, band_bottom, img_h, img_rect.left, img_rect.right)
-
-    if wizard_img_raw:
-        img_h = int(WIZARD_HEIGHT_M * STATUS_METER_TO_PIXEL)
-        orig_w, orig_h = wizard_img_raw.get_size()
-        img_w = max(1, int(orig_w * img_h / orig_h))
-        img = pygame.transform.smoothscale(wizard_img_raw, (img_w, img_h))
-        img_rect = img.get_rect(midbottom=(cx + 2 * spacing_px, band_bottom))
-        screen.blit(img, img_rect)
-        if is_debug:
-            pygame.draw.rect(screen, (255, 255, 255), img_rect, 1)
-            wizard_art_key = "wizard_front.png" if status_view == STATUS_VIEW_FRONT else "wizard_back.png"
-            draw_art_top_debug_line(wizard_art_key, WIZARD_HEIGHT_M, band_bottom, img_h, img_rect.left, img_rect.right)
-
-    if fighter_img_raw:
-        img_h = int(FIGHTER_HEIGHT_M * STATUS_METER_TO_PIXEL)
-        orig_w, orig_h = fighter_img_raw.get_size()
-        img_w = max(1, int(orig_w * img_h / orig_h))
-        img = pygame.transform.smoothscale(fighter_img_raw, (img_w, img_h))
-        img_rect = img.get_rect(midbottom=(cx + 3 * spacing_px, band_bottom))
-        screen.blit(img, img_rect)
-        if is_debug:
-            pygame.draw.rect(screen, (255, 255, 255), img_rect, 1)
-            fighter_art_key = "fighter_front.png" if status_view == STATUS_VIEW_FRONT else "fighter_back.png"
-            draw_art_top_debug_line(fighter_art_key, FIGHTER_HEIGHT_M, band_bottom, img_h, img_rect.left, img_rect.right)
+            art_key = front_key if is_front else back_key
+            draw_art_top_debug_line(art_key, height_m, band_bottom, img_h, img_rect.left, img_rect.right)
 
     screen.set_clip(None)
 
