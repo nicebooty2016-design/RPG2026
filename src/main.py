@@ -3899,48 +3899,13 @@ def render_battle():
         heroine_display_img_raw = apply_damage_flash(heroine_display_img_raw, "bunny_back.png", HEROINE_HEIGHT_M, heroine_damage_anim_old_hp, heroine_damage_anim_new_hp, HEROINE_MAX_HP, heroine_damage_anim_frame, heroine_damage_anim_flash_color)
         img, img_pos, img_rect = smoothscale_visible(heroine_display_img_raw, final_img_w, final_img_h, (heroine_x, bottom_y), clip_rect)
 
-        # ★ 残像（接近・後退中のみ）：BATTLE_WHIP_TRAIL_OFFSET_1/2 フレーム前の位置に半透明のヒロイン画像を重ねて表示する
-        # （現在位置とほとんど同じ場合は表示しない。描画順は接近時＝現在→A→B、後退時＝B→A→現在）
-        whip_moving = whip_active and battle_whip_phase in (BATTLE_WHIP_PHASE_APPROACH, BATTLE_WHIP_PHASE_RETURN)
-        current_pos = (heroine_x, bottom_y, img_h)
-        trail_history_size = max(BATTLE_WHIP_TRAIL_OFFSET_1, BATTLE_WHIP_TRAIL_OFFSET_2)
-
-        def find_trail_pos(offset):
-            if offset <= 0 or len(heroine_whip_trail) < offset:
-                return None
-            px, py, _ = heroine_whip_trail[-offset]
-            min_offset_sq = BATTLE_WHIP_TRAIL_MIN_OFFSET_PX ** 2
-            if (px - heroine_x) ** 2 + (py - bottom_y) ** 2 < min_offset_sq:
-                return None
-            return heroine_whip_trail[-offset]
-
-        trail_a = None
-        trail_b = None
-        if whip_moving:
-            trail_a = find_trail_pos(BATTLE_WHIP_TRAIL_OFFSET_1)
-            trail_b = find_trail_pos(BATTLE_WHIP_TRAIL_OFFSET_2)
-
         # ★ ヒロインの描画本体（サムライとの前後関係を切り替えられるよう、関数化して呼び出しタイミングを後で決める）
         def draw_heroine_sprite():
             if -1 not in battle_party:
                 return
             screen.set_clip(clip_rect)
-            if whip_active and battle_whip_phase == BATTLE_WHIP_PHASE_RETURN:
-                # 戻るとき：B → A → 現在画像 の順で重ねる
-                if trail_b is not None:
-                    blit_heroine_trail_image(battle_back_img_raw, trail_b, BATTLE_WHIP_TRAIL_ALPHA_2, clip_rect)
-                if trail_a is not None:
-                    blit_heroine_trail_image(battle_back_img_raw, trail_a, BATTLE_WHIP_TRAIL_ALPHA_1, clip_rect)
-                if img is not None:
-                    screen.blit(img, img_pos)
-            else:
-                # 近づくとき（および通常時）：現在画像 → A → B の順で重ねる
-                if img is not None:
-                    screen.blit(img, img_pos)
-                if trail_a is not None:
-                    blit_heroine_trail_image(battle_back_img_raw, trail_a, BATTLE_WHIP_TRAIL_ALPHA_1, clip_rect)
-                if trail_b is not None:
-                    blit_heroine_trail_image(battle_back_img_raw, trail_b, BATTLE_WHIP_TRAIL_ALPHA_2, clip_rect)
+            if img is not None:
+                screen.blit(img, img_pos)
             if is_debug:
                 pygame.draw.rect(screen, (255, 255, 255), img_rect, 1)  # ★ [デバッグ] 元画像サイズの枠線
                 draw_art_top_debug_line("bunny_back.png", HEROINE_HEIGHT_M, bottom_y, final_img_h, img_rect.left, img_rect.right)  # ★ [デバッグ] 実際の絵の上端
@@ -3950,18 +3915,6 @@ def render_battle():
             heroine_hp_text = font.render(f"{heroine_hp}/{HEROINE_MAX_HP}", True, (255, 255, 255))
             heroine_hp_rect = heroine_hp_text.get_rect(midbottom=(img_rect.centerx, img_rect.top - 4))
             screen.blit(heroine_hp_text, heroine_hp_rect)
-
-        # 残像履歴を更新する（実際にフレームが進んだときのみ記録し、ポーズ中の再描画で重複登録しないようにする）
-        if whip_moving:
-            trail_key = (battle_whip_phase, battle_whip_frame)
-            if heroine_whip_trail_key != trail_key:
-                heroine_whip_trail_key = trail_key
-                heroine_whip_trail.append(current_pos)
-                if len(heroine_whip_trail) > trail_history_size:
-                    heroine_whip_trail.pop(0)
-        else:
-            heroine_whip_trail.clear()
-            heroine_whip_trail_key = None
 
         # ★ サムライ（仲間キャラ）の後ろ姿：ヒロインの1m右を基準位置とし、剣（近接攻撃）の番には敵に接近・後退する
         sam_back_img_raw = samurai_back_img_raw
@@ -4052,9 +4005,8 @@ def render_battle():
                 if (battle_dance_frame // blink_half) % 2 == 0:
                     sam_img.fill(BATTLE_DANCE_SAMURAI_FLASH_COLOR, special_flags=pygame.BLEND_RGB_ADD)
 
-            # ★ 残像（接近・後退中のみ）：ヒロインのムチと同じ仕組みを再利用する
-            # 音速剣のワープ後は接近フェーズの残像がそのまま引き継がれ、テレポート直後の「残像が一瞬漂う」演出になる
-            sword_moving = (sword_active or sonicken_active) and battle_samurai_whip_phase in (BATTLE_WHIP_PHASE_APPROACH, BATTLE_WHIP_PHASE_RETURN)
+            # ★ 残像（音速剣の接近・後退中のみ）
+            sonicken_moving = sonicken_active and battle_samurai_whip_phase in (BATTLE_WHIP_PHASE_APPROACH, BATTLE_WHIP_PHASE_RETURN)
             sam_current_pos = (sam_x, sam_bottom_y, sam_img_h)
             sam_trail_history_size = max(BATTLE_WHIP_TRAIL_OFFSET_1, BATTLE_WHIP_TRAIL_OFFSET_2)
 
@@ -4062,23 +4014,19 @@ def render_battle():
                 if offset <= 0 or len(samurai_whip_trail) < offset:
                     return None
                 px, py, _ = samurai_whip_trail[-offset]
-                min_offset_sq = BATTLE_WHIP_TRAIL_MIN_OFFSET_PX ** 2
-                if (px - sam_x) ** 2 + (py - sam_bottom_y) ** 2 < min_offset_sq:
+                if (px - sam_x) ** 2 + (py - sam_bottom_y) ** 2 < BATTLE_WHIP_TRAIL_MIN_OFFSET_PX ** 2:
                     return None
                 return samurai_whip_trail[-offset]
 
-            sam_trail_a = None
-            sam_trail_b = None
-            if sword_moving:
-                sam_trail_a = find_sam_trail_pos(BATTLE_WHIP_TRAIL_OFFSET_1)
-                sam_trail_b = find_sam_trail_pos(BATTLE_WHIP_TRAIL_OFFSET_2)
+            sam_trail_a = find_sam_trail_pos(BATTLE_WHIP_TRAIL_OFFSET_1) if sonicken_moving else None
+            sam_trail_b = find_sam_trail_pos(BATTLE_WHIP_TRAIL_OFFSET_2) if sonicken_moving else None
 
             # ★ サムライの描画本体（ヒロインとの前後関係を切り替えられるよう、関数化して呼び出しタイミングを後で決める）
             def draw_samurai_sprite():
                 if -2 not in battle_party:
                     return
                 screen.set_clip(clip_rect)
-                if (sword_active or sonicken_active) and battle_samurai_whip_phase == BATTLE_WHIP_PHASE_RETURN:
+                if sonicken_active and battle_samurai_whip_phase == BATTLE_WHIP_PHASE_RETURN:
                     # 戻るとき：B → A → 現在画像 の順で重ねる
                     if sam_trail_b is not None:
                         blit_heroine_trail_image(sam_back_img_raw, sam_trail_b, BATTLE_WHIP_TRAIL_ALPHA_2, clip_rect)
@@ -4104,8 +4052,8 @@ def render_battle():
                 samurai_hp_rect = samurai_hp_text.get_rect(midbottom=(sam_img_rect.centerx, sam_img_rect.top - 4))
                 screen.blit(samurai_hp_text, samurai_hp_rect)
 
-            # 残像履歴を更新する（実際にフレームが進んだときのみ記録し、ポーズ中の再描画で重複登録しないようにする）
-            if sword_moving:
+            # 残像履歴を更新する
+            if sonicken_moving:
                 sam_trail_key = (battle_samurai_whip_phase, battle_samurai_whip_frame)
                 if samurai_whip_trail_key != sam_trail_key:
                     samurai_whip_trail_key = sam_trail_key
@@ -4164,47 +4112,13 @@ def render_battle():
                 warrior_display_img_raw = apply_damage_flash(warrior_display_img_raw, "warrior_back.png", WARRIOR_HEIGHT_M, warrior_damage_anim_old_hp, warrior_damage_anim_new_hp, WARRIOR_MAX_HP, warrior_damage_anim_frame, warrior_damage_anim_flash_color)
                 warrior_img, warrior_img_pos, warrior_img_rect = smoothscale_visible(warrior_display_img_raw, warrior_final_w, warrior_final_h, (warrior_x, warrior_bottom_y), clip_rect)
 
-                # ★ 残像（接近・後退中のみ）：ヒロインのムチと同じ仕組みを再利用する
-                axe_moving = axe_active and battle_warrior_whip_phase in (BATTLE_WHIP_PHASE_APPROACH, BATTLE_WHIP_PHASE_RETURN)
-                warrior_current_pos = (warrior_x, warrior_bottom_y, warrior_img_h)
-                warrior_trail_history_size = max(BATTLE_WHIP_TRAIL_OFFSET_1, BATTLE_WHIP_TRAIL_OFFSET_2)
-
-                def find_warrior_trail_pos(offset):
-                    if offset <= 0 or len(warrior_whip_trail) < offset:
-                        return None
-                    px, py, _ = warrior_whip_trail[-offset]
-                    min_offset_sq = BATTLE_WHIP_TRAIL_MIN_OFFSET_PX ** 2
-                    if (px - warrior_x) ** 2 + (py - warrior_bottom_y) ** 2 < min_offset_sq:
-                        return None
-                    return warrior_whip_trail[-offset]
-
-                warrior_trail_a = None
-                warrior_trail_b = None
-                if axe_moving:
-                    warrior_trail_a = find_warrior_trail_pos(BATTLE_WHIP_TRAIL_OFFSET_1)
-                    warrior_trail_b = find_warrior_trail_pos(BATTLE_WHIP_TRAIL_OFFSET_2)
-
                 # ★ 女戦士の描画本体（他キャラとの前後関係を切り替えられるよう、関数化して呼び出しタイミングを後で決める）
                 def draw_warrior_sprite():
                     if -3 not in battle_party:
                         return
                     screen.set_clip(clip_rect)
-                    if axe_active and battle_warrior_whip_phase == BATTLE_WHIP_PHASE_RETURN:
-                        # 戻るとき：B → A → 現在画像 の順で重ねる
-                        if warrior_trail_b is not None:
-                            blit_heroine_trail_image(warrior_back_img_raw, warrior_trail_b, BATTLE_WHIP_TRAIL_ALPHA_2, clip_rect)
-                        if warrior_trail_a is not None:
-                            blit_heroine_trail_image(warrior_back_img_raw, warrior_trail_a, BATTLE_WHIP_TRAIL_ALPHA_1, clip_rect)
-                        if warrior_img is not None:
-                            screen.blit(warrior_img, warrior_img_pos)
-                    else:
-                        # 近づくとき（および通常時）：現在画像 → A → B の順で重ねる
-                        if warrior_img is not None:
-                            screen.blit(warrior_img, warrior_img_pos)
-                        if warrior_trail_a is not None:
-                            blit_heroine_trail_image(warrior_back_img_raw, warrior_trail_a, BATTLE_WHIP_TRAIL_ALPHA_1, clip_rect)
-                        if warrior_trail_b is not None:
-                            blit_heroine_trail_image(warrior_back_img_raw, warrior_trail_b, BATTLE_WHIP_TRAIL_ALPHA_2, clip_rect)
+                    if warrior_img is not None:
+                        screen.blit(warrior_img, warrior_img_pos)
                     if is_debug:
                         pygame.draw.rect(screen, (255, 255, 255), warrior_img_rect, 1)  # ★ [デバッグ] 元画像サイズの枠線
                         draw_art_top_debug_line("warrior_back.png", WARRIOR_HEIGHT_M, warrior_bottom_y, warrior_final_h, warrior_img_rect.left, warrior_img_rect.right)  # ★ [デバッグ] 実際の絵の上端
@@ -4214,18 +4128,6 @@ def render_battle():
                     warrior_hp_text = font.render(f"{warrior_hp}/{WARRIOR_MAX_HP}", True, (255, 255, 255))
                     warrior_hp_rect = warrior_hp_text.get_rect(midbottom=(warrior_img_rect.centerx, warrior_img_rect.top - 4))
                     screen.blit(warrior_hp_text, warrior_hp_rect)
-
-                # 残像履歴を更新する（実際にフレームが進んだときのみ記録し、ポーズ中の再描画で重複登録しないようにする）
-                if axe_moving:
-                    warrior_trail_key = (battle_warrior_whip_phase, battle_warrior_whip_frame)
-                    if warrior_whip_trail_key != warrior_trail_key:
-                        warrior_whip_trail_key = warrior_trail_key
-                        warrior_whip_trail.append(warrior_current_pos)
-                        if len(warrior_whip_trail) > warrior_trail_history_size:
-                            warrior_whip_trail.pop(0)
-                else:
-                    warrior_whip_trail.clear()
-                    warrior_whip_trail_key = None
 
                 # ★ シスター（仲間キャラ）の後ろ姿
                 if sister_back_img_raw:
@@ -4261,54 +4163,16 @@ def render_battle():
                     sister_display_img_raw = apply_hp_grayscale(sister_back_img_raw, "sister_back.png", SISTER_HEIGHT_M, int(round(sister_display_hp)), SISTER_MAX_HP)
                     sister_display_img_raw = apply_damage_flash(sister_display_img_raw, "sister_back.png", SISTER_HEIGHT_M, sister_damage_anim_old_hp, sister_damage_anim_new_hp, SISTER_MAX_HP, sister_damage_anim_frame, sister_damage_anim_flash_color)
                     sister_img_surf, sister_img_pos, sister_img_rect = smoothscale_visible(sister_display_img_raw, sister_final_w, sister_final_h, (sister_x, sister_bottom_y), clip_rect)
-                    sis_moving = sister_active and battle_sister_whip_phase in (BATTLE_WHIP_PHASE_APPROACH, BATTLE_WHIP_PHASE_RETURN)
-                    sister_current_pos = (sister_x, sister_bottom_y, sister_img_h)
-                    sis_trail_history_size = max(BATTLE_WHIP_TRAIL_OFFSET_1, BATTLE_WHIP_TRAIL_OFFSET_2)
-
-                    def find_sister_trail_pos(offset):
-                        if offset <= 0 or len(sister_whip_trail) < offset:
-                            return None
-                        px, py, _ = sister_whip_trail[-offset]
-                        if (px - sister_x) ** 2 + (py - sister_bottom_y) ** 2 < BATTLE_WHIP_TRAIL_MIN_OFFSET_PX ** 2:
-                            return None
-                        return sister_whip_trail[-offset]
-
-                    sis_trail_a = find_sister_trail_pos(BATTLE_WHIP_TRAIL_OFFSET_1) if sis_moving else None
-                    sis_trail_b = find_sister_trail_pos(BATTLE_WHIP_TRAIL_OFFSET_2) if sis_moving else None
-
                     def draw_sister_sprite():
                         if -4 not in battle_party:
                             return
                         screen.set_clip(clip_rect)
-                        if sister_active and battle_sister_whip_phase == BATTLE_WHIP_PHASE_RETURN:
-                            if sis_trail_b is not None:
-                                blit_heroine_trail_image(sister_back_img_raw, sis_trail_b, BATTLE_WHIP_TRAIL_ALPHA_2, clip_rect)
-                            if sis_trail_a is not None:
-                                blit_heroine_trail_image(sister_back_img_raw, sis_trail_a, BATTLE_WHIP_TRAIL_ALPHA_1, clip_rect)
-                            if sister_img_surf is not None:
-                                screen.blit(sister_img_surf, sister_img_pos)
-                        else:
-                            if sister_img_surf is not None:
-                                screen.blit(sister_img_surf, sister_img_pos)
-                            if sis_trail_a is not None:
-                                blit_heroine_trail_image(sister_back_img_raw, sis_trail_a, BATTLE_WHIP_TRAIL_ALPHA_1, clip_rect)
-                            if sis_trail_b is not None:
-                                blit_heroine_trail_image(sister_back_img_raw, sis_trail_b, BATTLE_WHIP_TRAIL_ALPHA_2, clip_rect)
+                        if sister_img_surf is not None:
+                            screen.blit(sister_img_surf, sister_img_pos)
                         screen.set_clip(None)
                         sister_hp_text = font.render(f"{sister_hp}/{SISTER_MAX_HP}", True, (255, 255, 255))
                         sister_hp_rect = sister_hp_text.get_rect(midbottom=(sister_img_rect.centerx, sister_img_rect.top - 4))
                         screen.blit(sister_hp_text, sister_hp_rect)
-
-                    if sis_moving:
-                        sis_tkey = (battle_sister_whip_phase, battle_sister_whip_frame)
-                        if sister_whip_trail_key != sis_tkey:
-                            sister_whip_trail_key = sis_tkey
-                            sister_whip_trail.append(sister_current_pos)
-                            if len(sister_whip_trail) > sis_trail_history_size:
-                                sister_whip_trail.pop(0)
-                    else:
-                        sister_whip_trail.clear()
-                        sister_whip_trail_key = None
                 else:
                     sister_active = False
                     def draw_sister_sprite(): pass
@@ -4347,54 +4211,16 @@ def render_battle():
                     kunoichi_display_img_raw = apply_hp_grayscale(kunoichi_back_img_raw, "kunoichi_back.png", KUNOICHI_HEIGHT_M, int(round(kunoichi_display_hp)), KUNOICHI_MAX_HP)
                     kunoichi_display_img_raw = apply_damage_flash(kunoichi_display_img_raw, "kunoichi_back.png", KUNOICHI_HEIGHT_M, kunoichi_damage_anim_old_hp, kunoichi_damage_anim_new_hp, KUNOICHI_MAX_HP, kunoichi_damage_anim_frame, kunoichi_damage_anim_flash_color)
                     kunoichi_img_surf, kunoichi_img_pos, kunoichi_img_rect = smoothscale_visible(kunoichi_display_img_raw, kunoichi_final_w, kunoichi_final_h, (kunoichi_x, kunoichi_bottom_y), clip_rect)
-                    kun_moving = kunoichi_active and battle_kunoichi_whip_phase in (BATTLE_WHIP_PHASE_APPROACH, BATTLE_WHIP_PHASE_RETURN)
-                    kunoichi_current_pos = (kunoichi_x, kunoichi_bottom_y, kunoichi_img_h)
-                    kun_trail_history_size = max(BATTLE_WHIP_TRAIL_OFFSET_1, BATTLE_WHIP_TRAIL_OFFSET_2)
-
-                    def find_kunoichi_trail_pos(offset):
-                        if offset <= 0 or len(kunoichi_whip_trail) < offset:
-                            return None
-                        px, py, _ = kunoichi_whip_trail[-offset]
-                        if (px - kunoichi_x) ** 2 + (py - kunoichi_bottom_y) ** 2 < BATTLE_WHIP_TRAIL_MIN_OFFSET_PX ** 2:
-                            return None
-                        return kunoichi_whip_trail[-offset]
-
-                    kun_trail_a = find_kunoichi_trail_pos(BATTLE_WHIP_TRAIL_OFFSET_1) if kun_moving else None
-                    kun_trail_b = find_kunoichi_trail_pos(BATTLE_WHIP_TRAIL_OFFSET_2) if kun_moving else None
-
                     def draw_kunoichi_sprite():
                         if -5 not in battle_party:
                             return
                         screen.set_clip(clip_rect)
-                        if kunoichi_active and battle_kunoichi_whip_phase == BATTLE_WHIP_PHASE_RETURN:
-                            if kun_trail_b is not None:
-                                blit_heroine_trail_image(kunoichi_back_img_raw, kun_trail_b, BATTLE_WHIP_TRAIL_ALPHA_2, clip_rect)
-                            if kun_trail_a is not None:
-                                blit_heroine_trail_image(kunoichi_back_img_raw, kun_trail_a, BATTLE_WHIP_TRAIL_ALPHA_1, clip_rect)
-                            if kunoichi_img_surf is not None:
-                                screen.blit(kunoichi_img_surf, kunoichi_img_pos)
-                        else:
-                            if kunoichi_img_surf is not None:
-                                screen.blit(kunoichi_img_surf, kunoichi_img_pos)
-                            if kun_trail_a is not None:
-                                blit_heroine_trail_image(kunoichi_back_img_raw, kun_trail_a, BATTLE_WHIP_TRAIL_ALPHA_1, clip_rect)
-                            if kun_trail_b is not None:
-                                blit_heroine_trail_image(kunoichi_back_img_raw, kun_trail_b, BATTLE_WHIP_TRAIL_ALPHA_2, clip_rect)
+                        if kunoichi_img_surf is not None:
+                            screen.blit(kunoichi_img_surf, kunoichi_img_pos)
                         screen.set_clip(None)
                         kunoichi_hp_text = font.render(f"{kunoichi_hp}/{KUNOICHI_MAX_HP}", True, (255, 255, 255))
                         kunoichi_hp_rect = kunoichi_hp_text.get_rect(midbottom=(kunoichi_img_rect.centerx, kunoichi_img_rect.top - 4))
                         screen.blit(kunoichi_hp_text, kunoichi_hp_rect)
-
-                    if kun_moving:
-                        kun_tkey = (battle_kunoichi_whip_phase, battle_kunoichi_whip_frame)
-                        if kunoichi_whip_trail_key != kun_tkey:
-                            kunoichi_whip_trail_key = kun_tkey
-                            kunoichi_whip_trail.append(kunoichi_current_pos)
-                            if len(kunoichi_whip_trail) > kun_trail_history_size:
-                                kunoichi_whip_trail.pop(0)
-                    else:
-                        kunoichi_whip_trail.clear()
-                        kunoichi_whip_trail_key = None
                 else:
                     kunoichi_active = False
                     def draw_kunoichi_sprite(): pass
@@ -4433,54 +4259,16 @@ def render_battle():
                     wizard_display_img_raw = apply_hp_grayscale(wizard_back_img_raw, "wizard_back.png", WIZARD_HEIGHT_M, int(round(wizard_display_hp)), WIZARD_MAX_HP)
                     wizard_display_img_raw = apply_damage_flash(wizard_display_img_raw, "wizard_back.png", WIZARD_HEIGHT_M, wizard_damage_anim_old_hp, wizard_damage_anim_new_hp, WIZARD_MAX_HP, wizard_damage_anim_frame, wizard_damage_anim_flash_color)
                     wizard_img_surf, wizard_img_pos, wizard_img_rect = smoothscale_visible(wizard_display_img_raw, wizard_final_w, wizard_final_h, (wizard_x, wizard_bottom_y), clip_rect)
-                    wiz_moving = wizard_active and battle_wizard_whip_phase in (BATTLE_WHIP_PHASE_APPROACH, BATTLE_WHIP_PHASE_RETURN)
-                    wizard_current_pos = (wizard_x, wizard_bottom_y, wizard_img_h)
-                    wiz_trail_history_size = max(BATTLE_WHIP_TRAIL_OFFSET_1, BATTLE_WHIP_TRAIL_OFFSET_2)
-
-                    def find_wizard_trail_pos(offset):
-                        if offset <= 0 or len(wizard_whip_trail) < offset:
-                            return None
-                        px, py, _ = wizard_whip_trail[-offset]
-                        if (px - wizard_x) ** 2 + (py - wizard_bottom_y) ** 2 < BATTLE_WHIP_TRAIL_MIN_OFFSET_PX ** 2:
-                            return None
-                        return wizard_whip_trail[-offset]
-
-                    wiz_trail_a = find_wizard_trail_pos(BATTLE_WHIP_TRAIL_OFFSET_1) if wiz_moving else None
-                    wiz_trail_b = find_wizard_trail_pos(BATTLE_WHIP_TRAIL_OFFSET_2) if wiz_moving else None
-
                     def draw_wizard_sprite():
                         if -6 not in battle_party:
                             return
                         screen.set_clip(clip_rect)
-                        if wizard_active and battle_wizard_whip_phase == BATTLE_WHIP_PHASE_RETURN:
-                            if wiz_trail_b is not None:
-                                blit_heroine_trail_image(wizard_back_img_raw, wiz_trail_b, BATTLE_WHIP_TRAIL_ALPHA_2, clip_rect)
-                            if wiz_trail_a is not None:
-                                blit_heroine_trail_image(wizard_back_img_raw, wiz_trail_a, BATTLE_WHIP_TRAIL_ALPHA_1, clip_rect)
-                            if wizard_img_surf is not None:
-                                screen.blit(wizard_img_surf, wizard_img_pos)
-                        else:
-                            if wizard_img_surf is not None:
-                                screen.blit(wizard_img_surf, wizard_img_pos)
-                            if wiz_trail_a is not None:
-                                blit_heroine_trail_image(wizard_back_img_raw, wiz_trail_a, BATTLE_WHIP_TRAIL_ALPHA_1, clip_rect)
-                            if wiz_trail_b is not None:
-                                blit_heroine_trail_image(wizard_back_img_raw, wiz_trail_b, BATTLE_WHIP_TRAIL_ALPHA_2, clip_rect)
+                        if wizard_img_surf is not None:
+                            screen.blit(wizard_img_surf, wizard_img_pos)
                         screen.set_clip(None)
                         wizard_hp_text = font.render(f"{wizard_hp}/{WIZARD_MAX_HP}", True, (255, 255, 255))
                         wizard_hp_rect = wizard_hp_text.get_rect(midbottom=(wizard_img_rect.centerx, wizard_img_rect.top - 4))
                         screen.blit(wizard_hp_text, wizard_hp_rect)
-
-                    if wiz_moving:
-                        wiz_tkey = (battle_wizard_whip_phase, battle_wizard_whip_frame)
-                        if wizard_whip_trail_key != wiz_tkey:
-                            wizard_whip_trail_key = wiz_tkey
-                            wizard_whip_trail.append(wizard_current_pos)
-                            if len(wizard_whip_trail) > wiz_trail_history_size:
-                                wizard_whip_trail.pop(0)
-                    else:
-                        wizard_whip_trail.clear()
-                        wizard_whip_trail_key = None
                 else:
                     wizard_active = False
                     def draw_wizard_sprite(): pass
@@ -4519,54 +4307,16 @@ def render_battle():
                     fighter_display_img_raw = apply_hp_grayscale(fighter_back_img_raw, "fighter_back.png", FIGHTER_HEIGHT_M, int(round(fighter_display_hp)), FIGHTER_MAX_HP)
                     fighter_display_img_raw = apply_damage_flash(fighter_display_img_raw, "fighter_back.png", FIGHTER_HEIGHT_M, fighter_damage_anim_old_hp, fighter_damage_anim_new_hp, FIGHTER_MAX_HP, fighter_damage_anim_frame, fighter_damage_anim_flash_color)
                     fighter_img_surf, fighter_img_pos, fighter_img_rect = smoothscale_visible(fighter_display_img_raw, fighter_final_w, fighter_final_h, (fighter_x, fighter_bottom_y), clip_rect)
-                    fig_moving = fighter_active and battle_fighter_whip_phase in (BATTLE_WHIP_PHASE_APPROACH, BATTLE_WHIP_PHASE_RETURN)
-                    fighter_current_pos = (fighter_x, fighter_bottom_y, fighter_img_h)
-                    fig_trail_history_size = max(BATTLE_WHIP_TRAIL_OFFSET_1, BATTLE_WHIP_TRAIL_OFFSET_2)
-
-                    def find_fighter_trail_pos(offset):
-                        if offset <= 0 or len(fighter_whip_trail) < offset:
-                            return None
-                        px, py, _ = fighter_whip_trail[-offset]
-                        if (px - fighter_x) ** 2 + (py - fighter_bottom_y) ** 2 < BATTLE_WHIP_TRAIL_MIN_OFFSET_PX ** 2:
-                            return None
-                        return fighter_whip_trail[-offset]
-
-                    fig_trail_a = find_fighter_trail_pos(BATTLE_WHIP_TRAIL_OFFSET_1) if fig_moving else None
-                    fig_trail_b = find_fighter_trail_pos(BATTLE_WHIP_TRAIL_OFFSET_2) if fig_moving else None
-
                     def draw_fighter_sprite():
                         if -7 not in battle_party:
                             return
                         screen.set_clip(clip_rect)
-                        if fighter_active and battle_fighter_whip_phase == BATTLE_WHIP_PHASE_RETURN:
-                            if fig_trail_b is not None:
-                                blit_heroine_trail_image(fighter_back_img_raw, fig_trail_b, BATTLE_WHIP_TRAIL_ALPHA_2, clip_rect)
-                            if fig_trail_a is not None:
-                                blit_heroine_trail_image(fighter_back_img_raw, fig_trail_a, BATTLE_WHIP_TRAIL_ALPHA_1, clip_rect)
-                            if fighter_img_surf is not None:
-                                screen.blit(fighter_img_surf, fighter_img_pos)
-                        else:
-                            if fighter_img_surf is not None:
-                                screen.blit(fighter_img_surf, fighter_img_pos)
-                            if fig_trail_a is not None:
-                                blit_heroine_trail_image(fighter_back_img_raw, fig_trail_a, BATTLE_WHIP_TRAIL_ALPHA_1, clip_rect)
-                            if fig_trail_b is not None:
-                                blit_heroine_trail_image(fighter_back_img_raw, fig_trail_b, BATTLE_WHIP_TRAIL_ALPHA_2, clip_rect)
+                        if fighter_img_surf is not None:
+                            screen.blit(fighter_img_surf, fighter_img_pos)
                         screen.set_clip(None)
                         fighter_hp_text = font.render(f"{fighter_hp}/{FIGHTER_MAX_HP}", True, (255, 255, 255))
                         fighter_hp_rect = fighter_hp_text.get_rect(midbottom=(fighter_img_rect.centerx, fighter_img_rect.top - 4))
                         screen.blit(fighter_hp_text, fighter_hp_rect)
-
-                    if fig_moving:
-                        fig_tkey = (battle_fighter_whip_phase, battle_fighter_whip_frame)
-                        if fighter_whip_trail_key != fig_tkey:
-                            fighter_whip_trail_key = fig_tkey
-                            fighter_whip_trail.append(fighter_current_pos)
-                            if len(fighter_whip_trail) > fig_trail_history_size:
-                                fighter_whip_trail.pop(0)
-                    else:
-                        fighter_whip_trail.clear()
-                        fighter_whip_trail_key = None
                 else:
                     fighter_active = False
                     def draw_fighter_sprite(): pass
