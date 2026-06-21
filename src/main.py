@@ -207,6 +207,7 @@ BATTLE_MENU_BG_COLOR  = (0, 0, 0)  # ウィンドウ内背景の色
 BATTLE_MENU_BG_ALPHA  = 150        # ウィンドウ内背景の不透明度（0=透明 ～ 255=不透明）
 
 BATTLE_MENU_FONT_SIZE = 18  # 選択肢テキストのフォントサイズ（メイリオ使用、文字化け対策）
+BATTLE_MENU_CHARA_NAME_FONT_SIZE = 13  # 上枠線に重ねるキャラ名のフォントサイズ（直接指定）
 
 BATTLE_MENU_TEXT_PADDING_X = int(14 * FONT_SCALE)  # 選択肢テキストの左余白（px）
 BATTLE_MENU_TEXT_PADDING_Y = int(8 * FONT_SCALE)   # 選択肢テキストの上余白（px）
@@ -657,6 +658,7 @@ DEBUG_FONT_SIZE       = 24  # FPS等のデバッグ表示・敵/踊り子/サム
 font           = pygame.font.SysFont(None, max(1, int(DEBUG_FONT_SIZE * FONT_SCALE)))
 font_result    = pygame.font.Font('C:/Windows/Fonts/meiryo.ttc', max(1, int(RESULT_TEXT_FONT_SIZE * FONT_SCALE)))
 font_battle_menu = pygame.font.Font('C:/Windows/Fonts/meiryo.ttc', max(1, int(BATTLE_MENU_FONT_SIZE * FONT_SCALE)))
+font_battle_menu_chara = pygame.font.Font('C:/Windows/Fonts/meiryo.ttc', max(1, int(BATTLE_MENU_CHARA_NAME_FONT_SIZE * FONT_SCALE)))
 
 # 左上のデバッグ表示（FPS・座標等）：開始位置・行間もFONT_SCALEで拡縮する
 DEBUG_TEXT_MARGIN      = int(10 * FONT_SCALE)  # 画面左上からの余白（px）
@@ -686,10 +688,12 @@ PLAYER_COLLIDER_RADIUS = 0.25
 METER_TO_PIXEL = 64
 def _load_chara_master():
     import csv
-    _path = os.path.join(os.path.dirname(__file__), 'master_data_charas.csv')
+    _path = os.path.join(os.path.dirname(__file__), '..', 'assets', 'master_data_charas.csv')
     result = {}
     with open(_path, encoding='utf-8', newline='') as _f:
         for _id, _row in enumerate(csv.DictReader(_f), start=1):
+            if not _row['Name']:  # 空行はスキップ
+                continue
             result[_id] = {'name': _row['Name'], 'label': _row['Label'], 'height': float(_row['Height'])}
     return result
 
@@ -4460,24 +4464,24 @@ def render_battle():
     # ★ 攻撃選択サブウィンドウ（ズームアウト完了後・コマンド選択中のみ表示。攻防ステート中は非表示）
     if member_zoomout_frame >= BATTLE_MEMBER_ZOOMOUT_FRAMES:
         if battle_phase == BATTLE_PHASE_COMMAND_DANCER:
-            render_battle_menu(BATTLE_MENU_OPTIONS, battle_menu_selected_index)
+            render_battle_menu(BATTLE_MENU_OPTIONS, battle_menu_selected_index, _CHARA_MASTER[1]['label'])
         elif battle_phase == BATTLE_PHASE_COMMAND_SAMURAI:
-            render_battle_menu(get_samurai_menu_options(), battle_samurai_menu_selected_index)
+            render_battle_menu(get_samurai_menu_options(), battle_samurai_menu_selected_index, _CHARA_MASTER[2]['label'])
         elif battle_phase == BATTLE_PHASE_COMMAND_WARRIOR:
-            render_battle_menu(WARRIOR_MENU_OPTIONS, battle_warrior_menu_selected_index)
+            render_battle_menu(WARRIOR_MENU_OPTIONS, battle_warrior_menu_selected_index, _CHARA_MASTER[3]['label'])
         elif battle_phase == BATTLE_PHASE_COMMAND_SISTER:
-            render_battle_menu(SISTER_MENU_OPTIONS, battle_sister_menu_selected_index)
+            render_battle_menu(SISTER_MENU_OPTIONS, battle_sister_menu_selected_index, _CHARA_MASTER[4]['label'])
         elif battle_phase == BATTLE_PHASE_COMMAND_KUNOICHI:
-            render_battle_menu(KUNOICHI_MENU_OPTIONS, battle_kunoichi_menu_selected_index)
+            render_battle_menu(KUNOICHI_MENU_OPTIONS, battle_kunoichi_menu_selected_index, _CHARA_MASTER[5]['label'])
         elif battle_phase == BATTLE_PHASE_COMMAND_WIZARD:
-            render_battle_menu(WIZARD_MENU_OPTIONS, battle_wizard_menu_selected_index)
+            render_battle_menu(WIZARD_MENU_OPTIONS, battle_wizard_menu_selected_index, _CHARA_MASTER[6]['label'])
         elif battle_phase == BATTLE_PHASE_COMMAND_FIGHTER:
-            render_battle_menu(FIGHTER_MENU_OPTIONS, battle_fighter_menu_selected_index)
+            render_battle_menu(FIGHTER_MENU_OPTIONS, battle_fighter_menu_selected_index, _CHARA_MASTER[7]['label'])
 
 # ---------------------------------------------------------
 # render_battle_menu()：攻撃選択サブウィンドウの描画
 # ---------------------------------------------------------
-def render_battle_menu(options, selected_index):
+def render_battle_menu(options, selected_index, chara_label=''):
     # 選択肢数に応じてウィンドウ高さを動的に算出する
     menu_height = BATTLE_MENU_TEXT_PADDING_Y * 2 + len(options) * BATTLE_MENU_LINE_HEIGHT
     menu_x = SCREEN_W - BATTLE_MENU_WIDTH - BATTLE_MENU_MARGIN
@@ -4499,6 +4503,19 @@ def render_battle_menu(options, selected_index):
         BATTLE_MENU_BORDER_WIDTH,
         border_radius=BATTLE_MENU_BORDER_RADIUS
     )
+
+    # キャラ名称を上枠線に重ねて表示（枠線がテキスト領域の背後で消えるよう上枠を背景色で塗りつぶす）
+    if chara_label:
+        name_surf = font_battle_menu_chara.render(chara_label, True, BATTLE_MENU_BORDER_COLOR)
+        name_w, name_h = name_surf.get_size()
+        name_x = menu_x + BATTLE_MENU_TEXT_PADDING_X
+        name_y = menu_y - name_h // 2  # 上枠線の中央に縦合わせ
+        # テキスト背後の枠線を消すため、メニュー背景色で上書き
+        erase_x = name_x - 2
+        erase_w = name_w + 4
+        pygame.draw.rect(screen, BATTLE_MENU_BG_COLOR,
+                         pygame.Rect(erase_x, menu_y - BATTLE_MENU_BORDER_WIDTH, erase_w, BATTLE_MENU_BORDER_WIDTH * 2 + 1))
+        screen.blit(name_surf, (name_x, name_y))
 
     # 選択肢（上から左寄せで表示。選択中は白、それ以外はグレーアウト。文字化け対策でメイリオを使用）
     for i, label in enumerate(options):
