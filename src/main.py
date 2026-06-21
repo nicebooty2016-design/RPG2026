@@ -515,12 +515,9 @@ BATTLE_COMMAND_PHASE_TO_CHARACTER = {BATTLE_PHASE_COMMAND_DANCER: -1, BATTLE_PHA
 battle_command_phase_order = list(BATTLE_COMMAND_PHASE_CYCLE)  # start_battle()でbattle_focus_characterに応じて再計算する
 
 # バトル参加キャラクターのワールド座標系での基準位置（メートル）。左から右へ
-# 「注視キャラ（中央）, その後の順に右へ3人, 巡回して左へ3人」の並びとなるよう、
-# start_battle()でbattle_command_phase_orderに応じて再計算する
-# order_index 0=注視キャラ(0.0m), 1=次→右(+0.5m), 2=次々→右(+1.0m), 3=右端(+1.5m),
-#              4=左端(-1.5m), 5=左から2番目(-1.0m), 6=中央左隣(-0.5m)
-BATTLE_ORDER_POSITION_OFFSET_M = {0: 0.0, 1: 0.5, 2: 1.0, 3: 1.5, 4: -1.5, 5: -1.0, 6: -0.5}
-battle_character_world_offset_m = {-1: 0.0, -2: 0.5, -3: 1.0, -4: 1.5, -5: -1.5, -6: -1.0, -7: -0.5}
+# バトルメンバーの横間隔（メートル）。人数に関わらず一定。start_battle()で均等配置を計算する
+BATTLE_MEMBER_SPACING_M = 0.8
+battle_character_world_offset_m = {-1: 0.0, -2: 1.5, -3: 3.0, -4: 4.5, -5: -4.5, -6: -3.0, -7: -1.5}
 # 参戦する仲間キャラのID一覧（start_battle()でセットされる。ここはデフォルト値）
 battle_party = [-1, -2, -3, -4, -5, -6, -7]
 
@@ -697,6 +694,33 @@ def _get_dancer_action():
     """踊り子が現在選択しているアクション名を返す（未定義インデックスは空文字）。"""
     _acts = _CHARA_MASTER['Dancer']['actions']
     return _acts[battle_menu_selected_index] if 0 <= battle_menu_selected_index < len(_acts) else ''
+
+def _get_wizard_action():
+    """魔導士が現在選択しているアクション名を返す（未定義インデックスは空文字）。"""
+    _acts = _CHARA_MASTER['Wizard']['actions']
+    return _acts[battle_wizard_menu_selected_index] if 0 <= battle_wizard_menu_selected_index < len(_acts) else ''
+
+def _load_savedata():
+    import csv
+    _path = os.path.join(os.path.dirname(__file__), '..', 'user', 'savedata.csv')
+    result = {}
+    try:
+        with open(_path, encoding='utf-8', newline='') as _f:
+            for _row in csv.DictReader(_f):
+                _id = (_row.get('ID') or '').strip()
+                if _id:
+                    result[_id] = (_row.get('Value') or '').strip()
+    except FileNotFoundError:
+        pass
+    return result
+
+_SAVEDATA = _load_savedata()
+
+# キャラクター名（CSV Name列）→ バトル内部ID のマッピング
+_CHARA_NAME_TO_BATTLE_ID = {
+    'Dancer': -1, 'Samurai': -2, 'Warrior': -3, 'Sister': -4,
+    'Kunoichi': -5, 'Wizard': -6, 'Fighter': -7,
+}
 
 DANCER_HEIGHT_M   = _CHARA_MASTER['Dancer']['height']
 SAMURAI_HEIGHT_M  = _CHARA_MASTER['Samurai']['height']
@@ -1274,9 +1298,7 @@ def load_attack_voices():
 #                      実際に読み込めたものをランダムに選んで再生する
 # ---------------------------------------------------------
 def play_attack_voice():
-    numbers = (BATTLE_FLAME_ATTACK_VOICE_NUMBERS if _get_dancer_action() == '炎'
-               else BATTLE_WHIP_ATTACK_VOICE_NUMBERS)
-    candidates = [voice_attack_by_number[n] for n in numbers if n in voice_attack_by_number]
+    candidates = [voice_attack_by_number[n] for n in BATTLE_WHIP_ATTACK_VOICE_NUMBERS if n in voice_attack_by_number]
     if candidates:
         random.choice(candidates).play()
 
@@ -1315,11 +1337,7 @@ def start_battle_turn():
     if attacker == -1:
         battle_attacking_enemy_index = -1
         _da = _get_dancer_action()
-        if _da == '炎':
-            battle_flame_phase = BATTLE_FLAME_PHASE_CAST
-            battle_flame_frame = 0
-            play_attack_voice()
-        elif _da == 'マカダンス':
+        if _da == 'マカダンス':
             battle_dance_phase = BATTLE_DANCE_PHASE_SINK
             battle_dance_frame = 0
             pygame.mixer.music.load(BGM_BATTLE_PATH)
@@ -1361,8 +1379,12 @@ def start_battle_turn():
         battle_kunoichi_whip_frame = 0
     elif attacker == -6:
         battle_attacking_enemy_index = -1
-        battle_wizard_whip_phase = BATTLE_WHIP_PHASE_APPROACH
-        battle_wizard_whip_frame = 0
+        if _get_wizard_action() == '火炎放射':
+            battle_flame_phase = BATTLE_FLAME_PHASE_CAST
+            battle_flame_frame = 0
+        else:
+            battle_wizard_whip_phase = BATTLE_WHIP_PHASE_APPROACH
+            battle_wizard_whip_frame = 0
     elif attacker == -7:
         battle_attacking_enemy_index = -1
         battle_fighter_whip_phase = BATTLE_WHIP_PHASE_APPROACH
@@ -1373,6 +1395,41 @@ def start_battle_turn():
         battle_enemy_attack_frame = 0
         # 敵の攻撃対象：全7仲間キャラからランダムに決定する
         battle_enemy_attack_target = random.choice(battle_party)
+
+def _apply_flame_attack(on_victory):
+    global battle_flame_phase, battle_flame_frame
+    global battle_annihilate_targets, battle_annihilate_frame
+    if battle_flame_phase == BATTLE_FLAME_PHASE_CAST:
+        battle_flame_frame += 1
+        if battle_flame_frame >= BATTLE_FLAME_CAST_DELAY_FRAMES:
+            battle_flame_phase = BATTLE_FLAME_PHASE_FLASH
+            battle_flame_frame = 0
+            if voice_goblin_damaged:
+                voice_goblin_damaged.play()
+    elif battle_flame_phase == BATTLE_FLAME_PHASE_FLASH:
+        battle_flame_frame += 1
+        if battle_flame_frame >= BATTLE_WHIP_FLASH_FRAMES:
+            newly_defeated = []
+            for i in range(len(enemy_defeated)):
+                if enemy_defeated[i]:
+                    continue
+                damage = random.randint(BATTLE_FLAME_DAMAGE_MIN, BATTLE_FLAME_DAMAGE_MAX)
+                old_hp = get_damage_display_hp(enemy_damage_anim_old_hp[i], enemy_damage_anim_new_hp[i], enemy_damage_anim_frame[i])
+                enemy_hp[i] = max(0, enemy_hp[i] - damage)
+                enemy_damage_anim_old_hp[i] = old_hp
+                enemy_damage_anim_new_hp[i] = enemy_hp[i]
+                enemy_damage_anim_frame[i]  = 0
+                enemy_damage_anim_flash_color[i] = DAMAGE_FLASH_COLOR_FLAME
+                if enemy_hp[i] <= 0:
+                    enemy_defeated[i] = True
+                    newly_defeated.append(i)
+            if newly_defeated:
+                battle_annihilate_targets = newly_defeated
+                battle_annihilate_frame   = 0
+            if all(enemy_defeated):
+                on_victory()
+            else:
+                advance_battle_turn()
 
 # ---------------------------------------------------------
 # advance_battle_turn()：現在の番の演出が完了したあと、次の番へ進める
@@ -1403,7 +1460,7 @@ def advance_battle_turn():
             battle_turn_index += 1
             continue
         # 攻撃対象が既に倒されている場合：この番をスキップする
-        if (attacker == -1 and _get_dancer_action() not in ('炎', 'マカダンス')
+        if (attacker == -1 and _get_dancer_action() != 'マカダンス'
                 and enemy_defeated[battle_target_enemy_index]):
             battle_turn_index += 1
             continue
@@ -1419,7 +1476,8 @@ def advance_battle_turn():
         if attacker == -5 and enemy_defeated[battle_kunoichi_target_enemy_index]:
             battle_turn_index += 1
             continue
-        if attacker == -6 and enemy_defeated[battle_wizard_target_enemy_index]:
+        if (attacker == -6 and _get_wizard_action() != '火炎放射'
+                and enemy_defeated[battle_wizard_target_enemy_index]):
             battle_turn_index += 1
             continue
         if attacker == -7 and enemy_defeated[battle_fighter_target_enemy_index]:
@@ -1847,7 +1905,7 @@ def battle_target_cursor_step(direction):
     global battle_target_enemy_index, battle_samurai_target_enemy_index, battle_warrior_target_enemy_index
     global battle_sister_target_enemy_index, battle_kunoichi_target_enemy_index
     global battle_wizard_target_enemy_index, battle_fighter_target_enemy_index
-    if battle_phase == BATTLE_PHASE_COMMAND_DANCER and _get_dancer_action() not in ('炎', 'マカダンス'):
+    if battle_phase == BATTLE_PHASE_COMMAND_DANCER and _get_dancer_action() != 'マカダンス':
         battle_target_enemy_index = find_alive_enemy_index(battle_target_enemy_index, direction)
     elif battle_phase == BATTLE_PHASE_COMMAND_SAMURAI:
         battle_samurai_target_enemy_index = find_alive_enemy_index(battle_samurai_target_enemy_index, direction)
@@ -1967,8 +2025,11 @@ def start_battle():
     member_zoomout_frame = 0
     member_idle_frame = 0
     member_idle_phase_offset = random.randint(0, BATTLE_MEMBER_IDLE_PERIOD_FRAMES - 1)
-    # ★ 参戦する仲間キャラを決定する（デバッグモード: サムライのみ、通常: 全7キャラ）
-    battle_party = [-2] if is_debug else [-1, -2, -3, -4, -5, -6, -7]
+    # ★ 参戦する仲間キャラを savedata.csv の BattleMembers から決定する
+    _members_str = _SAVEDATA.get('BattleMembers', '')
+    _party = [_CHARA_NAME_TO_BATTLE_ID[n.strip()]
+              for n in _members_str.split(',') if n.strip() in _CHARA_NAME_TO_BATTLE_ID]
+    battle_party = _party if _party else [-1, -2, -3, -4, -5, -6, -7]
     # ★ ズームアウトの注視先：参戦キャラからランダムに決定する
     battle_focus_character = random.choice(battle_party)
     # ★ 行動選択順：固定サイクルをフォーカスキャラ先頭に回転させ、参戦キャラのフェーズのみ抽出する
@@ -1977,10 +2038,20 @@ def start_battle():
     full_rotated_cycle = BATTLE_COMMAND_PHASE_CYCLE[start_idx:] + BATTLE_COMMAND_PHASE_CYCLE[:start_idx]
     party_phase_set = {BATTLE_FOCUS_CHARACTER_TO_COMMAND_PHASE[c] for c in battle_party}
     battle_command_phase_order = [ph for ph in full_rotated_cycle if ph in party_phase_set]
-    # ★ 立ち位置オフセット：全7キャラ分のフルテーブルを常に作成する（参戦外キャラは描画しないが位置は保持）
+    # ★ 立ち位置オフセット：参戦人数に応じて BATTLE_MEMBER_SPACING_M 間隔で均等配置する
+    # 奇数人数: 注視キャラ(=行動順0番)を画面中央(0m)に
+    # 偶数人数: 注視キャラ(+spacing/2)と左隣(-spacing/2)の中点を画面中央に
+    _N = len(battle_command_phase_order)
+    _S = BATTLE_MEMBER_SPACING_M
+    _center_shift = (_S / 2) if (_N % 2 == 0) else 0.0
+    _participant_offsets = {}
+    for _i, _ph in enumerate(battle_command_phase_order):
+        _c = BATTLE_COMMAND_PHASE_TO_CHARACTER[_ph]
+        _participant_offsets[_c] = _center_shift + (_i * _S if _i <= (_N - 1) // 2 else (_i - _N) * _S)
+    # 非参戦キャラは描画しないが辞書は全キャラ分必要なので 0.0 で埋める
     battle_character_world_offset_m = {
-        BATTLE_COMMAND_PHASE_TO_CHARACTER[phase]: BATTLE_ORDER_POSITION_OFFSET_M[order_index]
-        for order_index, phase in enumerate(full_rotated_cycle)
+        BATTLE_COMMAND_PHASE_TO_CHARACTER[_ph]: _participant_offsets.get(BATTLE_COMMAND_PHASE_TO_CHARACTER[_ph], 0.0)
+        for _ph in BATTLE_COMMAND_PHASE_CYCLE
     }
     enemy_silhouette_frame   = 0
     enemy_idle_frame         = 0
@@ -2041,13 +2112,6 @@ def start_battle():
     enemy_damage_anim_new_hp = [GOBLIN_MAX_HP] * len(ENEMY_X_RATIOS)
     enemy_damage_anim_frame  = [DAMAGE_ANIM_DONE_FRAME] * len(ENEMY_X_RATIOS)
     enemy_damage_anim_flash_color = [DAMAGE_FLASH_COLOR_WHIP] * len(ENEMY_X_RATIOS)
-    if is_debug:
-        # デバッグモード: ゴブリンは最初の1体のみ（残りは開戦時に撃破済みとする）
-        for k in range(1, len(ENEMY_X_RATIOS)):
-            enemy_defeated[k] = True
-            enemy_hp[k] = 0
-            enemy_damage_anim_old_hp[k] = 0
-            enemy_damage_anim_new_hp[k] = 0
     battle_annihilate_targets = []
     battle_annihilate_frame   = 0
     dancer_whip_trail.clear()
@@ -2143,8 +2207,7 @@ def process_ai_battle_input():
     if battle_phase == BATTLE_PHASE_COMMAND_DANCER:
         menu_options = _CHARA_MASTER['Dancer']['actions']
         current_menu_index = battle_menu_selected_index
-        # 炎・マカダンス以外（ムチまたは未実装）は単体対象のため、対応インデックスを動的に取得
-        target_selection_indices = tuple(i for i, a in enumerate(menu_options) if a not in ('炎', 'マカダンス'))
+        target_selection_indices = tuple(i for i, a in enumerate(menu_options) if a != 'マカダンス')
         current_target_index = battle_target_enemy_index
     elif battle_phase == BATTLE_PHASE_COMMAND_SAMURAI:
         menu_options = get_samurai_menu_options()
@@ -2867,48 +2930,51 @@ def update(dt):
                                 battle_kunoichi_target_enemy_index = find_alive_enemy_index(battle_kunoichi_target_enemy_index, 1)
                                 advance_battle_turn()
                     elif attacker == -6:
-                        if battle_wizard_whip_phase == BATTLE_WHIP_PHASE_APPROACH:
-                            battle_wizard_whip_frame += 1
-                            if battle_wizard_whip_frame >= BATTLE_WHIP_APPROACH_FRAMES:
-                                battle_wizard_whip_phase = BATTLE_WHIP_PHASE_DAMAGE_WAIT
-                                battle_wizard_whip_frame = 0
-                        elif battle_wizard_whip_phase == BATTLE_WHIP_PHASE_DAMAGE_WAIT:
-                            battle_wizard_whip_frame += 1
-                            if battle_wizard_whip_frame >= BATTLE_WHIP_DAMAGE_DELAY_FRAMES:
-                                battle_wizard_whip_phase = BATTLE_WHIP_PHASE_FLASH
-                                battle_wizard_whip_frame = 0
-                                if voice_goblin_damaged:
-                                    voice_goblin_damaged.play()
-                        elif battle_wizard_whip_phase == BATTLE_WHIP_PHASE_FLASH:
-                            battle_wizard_whip_frame += 1
-                            if battle_wizard_whip_frame >= BATTLE_WHIP_FLASH_FRAMES:
-                                target = battle_wizard_target_enemy_index
-                                damage = random.randint(BATTLE_WHIP_DAMAGE_MIN, BATTLE_WHIP_DAMAGE_MAX)
-                                old_display_hp = get_damage_display_hp(enemy_damage_anim_old_hp[target], enemy_damage_anim_new_hp[target], enemy_damage_anim_frame[target])
-                                enemy_hp[target] = max(0, enemy_hp[target] - damage)
-                                enemy_damage_anim_old_hp[target] = old_display_hp
-                                enemy_damage_anim_new_hp[target] = enemy_hp[target]
-                                enemy_damage_anim_frame[target]  = 0
-                                enemy_damage_anim_flash_color[target] = DAMAGE_FLASH_COLOR_WHIP
-                                if enemy_hp[target] <= 0:
-                                    enemy_defeated[target] = True
-                                    battle_annihilate_targets = [target]
-                                    battle_annihilate_frame   = 0
-                                if all(enemy_defeated):
-                                    wiz_target_x = int(SCREEN_W * ENEMY_X_RATIOS[target])
-                                    wiz_target_bottom_y = SCREEN_H - int(SCREEN_H * BATTLE_WHIP_TARGET_GROUND_Y_FROM_BOTTOM_RATIO)
-                                    wiz_target_img_h = int(SCREEN_H * BATTLE_WHIP_TARGET_SCALE)
-                                    enter_result_state(wizard_finish=True,
-                                                        wizard_override=(wiz_target_x, wiz_target_bottom_y, wiz_target_img_h),
-                                                        killed_enemy_index=target)
-                                else:
-                                    battle_wizard_whip_phase = BATTLE_WHIP_PHASE_RETURN
+                        if _get_wizard_action() == '火炎放射':
+                            _apply_flame_attack(lambda: enter_result_state(wizard_finish=True))
+                        else:
+                            if battle_wizard_whip_phase == BATTLE_WHIP_PHASE_APPROACH:
+                                battle_wizard_whip_frame += 1
+                                if battle_wizard_whip_frame >= BATTLE_WHIP_APPROACH_FRAMES:
+                                    battle_wizard_whip_phase = BATTLE_WHIP_PHASE_DAMAGE_WAIT
                                     battle_wizard_whip_frame = 0
-                        elif battle_wizard_whip_phase == BATTLE_WHIP_PHASE_RETURN:
-                            battle_wizard_whip_frame += 1
-                            if battle_wizard_whip_frame >= BATTLE_WHIP_APPROACH_FRAMES:
-                                battle_wizard_target_enemy_index = find_alive_enemy_index(battle_wizard_target_enemy_index, 1)
-                                advance_battle_turn()
+                            elif battle_wizard_whip_phase == BATTLE_WHIP_PHASE_DAMAGE_WAIT:
+                                battle_wizard_whip_frame += 1
+                                if battle_wizard_whip_frame >= BATTLE_WHIP_DAMAGE_DELAY_FRAMES:
+                                    battle_wizard_whip_phase = BATTLE_WHIP_PHASE_FLASH
+                                    battle_wizard_whip_frame = 0
+                                    if voice_goblin_damaged:
+                                        voice_goblin_damaged.play()
+                            elif battle_wizard_whip_phase == BATTLE_WHIP_PHASE_FLASH:
+                                battle_wizard_whip_frame += 1
+                                if battle_wizard_whip_frame >= BATTLE_WHIP_FLASH_FRAMES:
+                                    target = battle_wizard_target_enemy_index
+                                    damage = random.randint(BATTLE_WHIP_DAMAGE_MIN, BATTLE_WHIP_DAMAGE_MAX)
+                                    old_display_hp = get_damage_display_hp(enemy_damage_anim_old_hp[target], enemy_damage_anim_new_hp[target], enemy_damage_anim_frame[target])
+                                    enemy_hp[target] = max(0, enemy_hp[target] - damage)
+                                    enemy_damage_anim_old_hp[target] = old_display_hp
+                                    enemy_damage_anim_new_hp[target] = enemy_hp[target]
+                                    enemy_damage_anim_frame[target]  = 0
+                                    enemy_damage_anim_flash_color[target] = DAMAGE_FLASH_COLOR_WHIP
+                                    if enemy_hp[target] <= 0:
+                                        enemy_defeated[target] = True
+                                        battle_annihilate_targets = [target]
+                                        battle_annihilate_frame   = 0
+                                    if all(enemy_defeated):
+                                        wiz_target_x = int(SCREEN_W * ENEMY_X_RATIOS[target])
+                                        wiz_target_bottom_y = SCREEN_H - int(SCREEN_H * BATTLE_WHIP_TARGET_GROUND_Y_FROM_BOTTOM_RATIO)
+                                        wiz_target_img_h = int(SCREEN_H * BATTLE_WHIP_TARGET_SCALE)
+                                        enter_result_state(wizard_finish=True,
+                                                            wizard_override=(wiz_target_x, wiz_target_bottom_y, wiz_target_img_h),
+                                                            killed_enemy_index=target)
+                                    else:
+                                        battle_wizard_whip_phase = BATTLE_WHIP_PHASE_RETURN
+                                        battle_wizard_whip_frame = 0
+                            elif battle_wizard_whip_phase == BATTLE_WHIP_PHASE_RETURN:
+                                battle_wizard_whip_frame += 1
+                                if battle_wizard_whip_frame >= BATTLE_WHIP_APPROACH_FRAMES:
+                                    battle_wizard_target_enemy_index = find_alive_enemy_index(battle_wizard_target_enemy_index, 1)
+                                    advance_battle_turn()
                     elif attacker == -7:
                         if battle_fighter_whip_phase == BATTLE_WHIP_PHASE_APPROACH:
                             battle_fighter_whip_frame += 1
@@ -2952,46 +3018,6 @@ def update(dt):
                             if battle_fighter_whip_frame >= BATTLE_WHIP_APPROACH_FRAMES:
                                 battle_fighter_target_enemy_index = find_alive_enemy_index(battle_fighter_target_enemy_index, 1)
                                 advance_battle_turn()
-                    elif _get_dancer_action() == '炎':
-                        # 炎：その場にとどまったまま詠唱し（攻撃ボイスは番開始時に再生済み）、
-                        # 一定フレーム待機後、生存中の敵全体に同時に赤色点滅ダメージを与える
-                        if battle_flame_phase == BATTLE_FLAME_PHASE_CAST:
-                            battle_flame_frame += 1
-                            if battle_flame_frame >= BATTLE_FLAME_CAST_DELAY_FRAMES:
-                                battle_flame_phase = BATTLE_FLAME_PHASE_FLASH
-                                battle_flame_frame = 0
-                                if voice_goblin_damaged:
-                                    voice_goblin_damaged.play()
-                        elif battle_flame_phase == BATTLE_FLAME_PHASE_FLASH:
-                            battle_flame_frame += 1
-                            if battle_flame_frame >= BATTLE_WHIP_FLASH_FRAMES:
-                                # ダメージ演出完了の瞬間に、生存中の敵全体へ個別にランダムダメージを与えてHPを更新する
-                                # （0未満にはならない。0になった敵はその場で撃破扱いとなり、同時に殲滅演出を開始する）
-                                newly_defeated = []
-                                for i in range(len(enemy_defeated)):
-                                    if enemy_defeated[i]:
-                                        continue
-                                    damage = random.randint(BATTLE_FLAME_DAMAGE_MIN, BATTLE_FLAME_DAMAGE_MAX)
-                                    # ★ ダメージ表現アニメーション：更新前の見た目HPを起点に、更新後の実HPへ向けたアニメを開始する
-                                    old_display_hp = get_damage_display_hp(enemy_damage_anim_old_hp[i], enemy_damage_anim_new_hp[i], enemy_damage_anim_frame[i])
-                                    enemy_hp[i] = max(0, enemy_hp[i] - damage)
-                                    enemy_damage_anim_old_hp[i] = old_display_hp
-                                    enemy_damage_anim_new_hp[i] = enemy_hp[i]
-                                    enemy_damage_anim_frame[i]  = 0
-                                    enemy_damage_anim_flash_color[i] = DAMAGE_FLASH_COLOR_FLAME
-                                    if enemy_hp[i] <= 0:
-                                        enemy_defeated[i] = True
-                                        newly_defeated.append(i)
-
-                                if newly_defeated:
-                                    battle_annihilate_targets = newly_defeated
-                                    battle_annihilate_frame   = 0
-
-                                if all(enemy_defeated):
-                                    # 全滅：踊り子は接近していないため、後退や表示位置の上書きは不要
-                                    enter_result_state()
-                                else:
-                                    advance_battle_turn()
                     elif _get_dancer_action() == 'マカダンス':
                         # マカダンス：待機モーションの踊り子が画面下に消える → バトルウィンドウがピンクに染まりダンスを再生
                         # （仲間がいないため、演出が終わったらそのまま次の番へ進む）
@@ -3818,16 +3844,11 @@ def render_battle():
             enemy_rects.append(enemy_rect)
 
         # ★ 攻撃対象選択カーソル（対象の敵の頭上に点滅表示する下向き三角カーソル）
-        # 踊り子のムチ選択中：左右キーで選んだ対象1体のみ／炎選択中：全体攻撃のため生存中の敵全体に表示する
-        # サムライの剣選択中：左右キーで選んだ対象1体のみ
         # HPデバッグ表示と被らないよう、頭上のクリアランスにテキスト分の高さも加味して上方へ表示する
         cursor_target_indices = []
         if member_zoomout_frame >= BATTLE_MEMBER_ZOOMOUT_FRAMES:
             if battle_phase == BATTLE_PHASE_COMMAND_DANCER and _get_dancer_action() != 'マカダンス':
-                if _get_dancer_action() == '炎':
-                    cursor_target_indices = [i for i in range(len(enemy_rects)) if not enemy_defeated[i]]
-                else:  # ムチまたは未実装 → 単体
-                    cursor_target_indices = [battle_target_enemy_index] if 0 <= battle_target_enemy_index < len(enemy_rects) else []
+                cursor_target_indices = [battle_target_enemy_index] if 0 <= battle_target_enemy_index < len(enemy_rects) else []
             elif battle_phase == BATTLE_PHASE_COMMAND_SAMURAI:
                 cursor_target_indices = [battle_samurai_target_enemy_index] if 0 <= battle_samurai_target_enemy_index < len(enemy_rects) else []
 
@@ -3870,7 +3891,7 @@ def render_battle():
 
         # ★ ムチ（近接攻撃）：敵に接近 → 最接近で停止 → 元の位置へ後退
         # 接近・後退とも、進行方向の目的地に近づくほど減速する ease-out 補間（行きと帰りで共通の式 = 踊り子のズームアウト等と同じ手法）を用いる
-        whip_active = (battle_phase == BATTLE_PHASE_EXCHANGE and _get_dancer_action() not in ('炎', 'マカダンス')
+        whip_active = (battle_phase == BATTLE_PHASE_EXCHANGE and _get_dancer_action() != 'マカダンス'
                        and battle_attacking_enemy_index == -1 and battle_turn_order[battle_turn_index] == -1)
         if whip_active:
             if battle_whip_phase == BATTLE_WHIP_PHASE_APPROACH:
