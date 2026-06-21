@@ -684,13 +684,23 @@ PLAYER_COLLIDER_RADIUS = 0.25
 # ワールドスケール
 # ---------------------------------------------------------
 METER_TO_PIXEL = 64
-DANCER_HEIGHT_M = 1.8  # 踊り子の身長（メートル）
-SAMURAI_HEIGHT_M = 1.4  # サムライの身長（メートル）
-WARRIOR_HEIGHT_M = 2  # 女戦士の身長（メートル）
-SISTER_HEIGHT_M   = 1.5  # シスターの身長（メートル）
-KUNOICHI_HEIGHT_M = 1.65  # くノ一の身長（メートル）
-WIZARD_HEIGHT_M   = 1.7   # 魔法使いの身長（メートル）
-FIGHTER_HEIGHT_M  = 1.8   # 武道家の身長（メートル）
+def _load_chara_master():
+    import csv
+    _path = os.path.join(os.path.dirname(__file__), 'master_data_charas.csv')
+    result = {}
+    with open(_path, encoding='utf-8', newline='') as _f:
+        for _id, _row in enumerate(csv.DictReader(_f), start=1):
+            result[_id] = {'name': _row['Name'], 'label': _row['Label'], 'height': float(_row['Height'])}
+    return result
+
+_CHARA_MASTER = _load_chara_master()
+DANCER_HEIGHT_M   = _CHARA_MASTER[1]['height']
+SAMURAI_HEIGHT_M  = _CHARA_MASTER[2]['height']
+WARRIOR_HEIGHT_M  = _CHARA_MASTER[3]['height']
+SISTER_HEIGHT_M   = _CHARA_MASTER[4]['height']
+KUNOICHI_HEIGHT_M = _CHARA_MASTER[5]['height']
+WIZARD_HEIGHT_M   = _CHARA_MASTER[6]['height']
+FIGHTER_HEIGHT_M  = _CHARA_MASTER[7]['height']
 ENEMY_GOBLIN_HEIGHT_M = 1.2  # ゴブリンの身長（メートル）。立ち姿画像のデバッグ表示（実際の絵の上端の算出）に使用
 
 HP_GRAYSCALE_DARKNESS = 0.5  # HP低下によるグレースケール表示の暗さ（1=通常のグレースケール、0=真っ黒）
