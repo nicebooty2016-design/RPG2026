@@ -47,12 +47,14 @@ def set_titlebar_color(rgb):
     except Exception:
         pass
 
+_GAME_PARAMS_PATH = os.path.join(os.path.dirname(__file__), '..', 'assets', 'game_parameters.csv')
+_game_params_last_mtime = None
+
 def _load_game_parameters():
     import csv
-    _path = os.path.join(os.path.dirname(__file__), '..', 'assets', 'game_parameters.csv')
     result = {}
     try:
-        with open(_path, encoding='utf-8', newline='') as _f:
+        with open(_GAME_PARAMS_PATH, encoding='utf-8', newline='') as _f:
             for _row in csv.DictReader(_f):
                 _id = (_row.get('ID') or '').strip()
                 if _id:
@@ -60,6 +62,17 @@ def _load_game_parameters():
     except FileNotFoundError:
         pass
     return result
+
+def _reload_game_params_if_changed():
+    global _GAME_PARAMS, _game_params_last_mtime
+    try:
+        mtime = os.path.getmtime(_GAME_PARAMS_PATH)
+    except OSError:
+        return
+    if mtime == _game_params_last_mtime:
+        return
+    _game_params_last_mtime = mtime
+    _GAME_PARAMS = _load_game_parameters()
 
 _GAME_PARAMS = _load_game_parameters()
 
@@ -73,22 +86,14 @@ BATTLE_MAIN_WINDOW_HEIGHT_RATIO = 5 / 6  # ゲームウィンドウ高さ（SCRE
 BATTLE_MAIN_WINDOW_HEIGHT = int(SCREEN_H * BATTLE_MAIN_WINDOW_HEIGHT_RATIO)
 BATTLE_MAIN_WINDOW_ANIM_FRAMES = 10   # バトルメインウィンドウが開ききるまでのフレーム数
 
-# 仲間キャラ演出パラメータ：登場時／ズームアウト後それぞれについて、
-# バトルウィンドウ幅（=SCREEN_W）がワールド座標系で何mに相当するかを指定する
-# （この値が小さいほど、踊り子の身長(DANCER_HEIGHT_M)に対して画像が大きく＝ズームインして表示される）
-BATTLE_MEMBER_FIRST_WINDOW_WIDTH_M = 20 / 27  # 登場時（ズームイン状態）
-BATTLE_MEMBER_LAST_WINDOW_WIDTH_M  = 95 / 27  # ズームアウト後
-BATTLE_MEMBER_FIRST_METER_TO_PIXEL = SCREEN_W / BATTLE_MEMBER_FIRST_WINDOW_WIDTH_M
-BATTLE_MEMBER_LAST_METER_TO_PIXEL  = SCREEN_W / BATTLE_MEMBER_LAST_WINDOW_WIDTH_M
+# 仲間キャラ演出パラメータ：登場時／ズームアウト後の各値は game_parameters.csv で管理する
+# （BATTLE_MEMBER_FIRST/LAST_WINDOW_WIDTH_M → SCREEN_W÷幅 で METER_TO_PIXEL を算出）
 
 # バトルウィンドウが開いた後の静止 → ズームアウト
 BATTLE_MEMBER_FOCUS_DELAY_FRAMES = 20  # 静止フレーム数
 BATTLE_MEMBER_ZOOMOUT_FRAMES = 60      # ズームアウトに要するフレーム数
-# 注視キャラの足元Y位置：画面下端から画面高さの何倍上の位置か（ENEMY_GROUND_Y_FROM_BOTTOM_RATIOと同じ定義方式）
-# 算出式：foot_y = SCREEN_H - int(SCREEN_H * ratio)
-# 負値は足元が画面下端より下（画面外）にあることを意味する
-BATTLE_MEMBER_FIRST_GROUND_Y_FROM_BOTTOM_RATIO = 1/12   # 登場直後：バトルウィンドウ下端に足元が来る
-BATTLE_MEMBER_LAST_GROUND_Y_FROM_BOTTOM_RATIO  = -1/3   # ズームアウト完了後：足元が画面下端の1/3画面分下（腰あたりが下端に来る）
+# 注視キャラの足元Y位置比率は game_parameters.csv の BATTLE_MEMBER_FIRST/LAST_GROUND_Y_FROM_BOTTOM_RATIO で管理する
+# 算出式：foot_y = SCREEN_H - int(SCREEN_H * ratio)。負値は足元が画面外（下）を意味する
 
 # バトルウィンドウ色
 BATTLE_WINDOW_COLOR = (30, 80, 200)  # バトル中のウィンドウ色
@@ -373,10 +378,6 @@ status_view = STATUS_VIEW_BACK
 # （SCREEN_Wが変わってもステータスウィンドウの表示内容（拡縮）が変わらないよう、ここから1mあたりのピクセル数を算出する）
 STATUS_WINDOW_WIDTH_M = 4.0
 STATUS_METER_TO_PIXEL = SCREEN_W / STATUS_WINDOW_WIDTH_M
-# 隣り合うキャラの足元中心の横方向の間隔（ワールド座標・メートル）
-# N人均等配置時の端のキャラ位置：画面中央 ± (N-1)/2 * spacing_px
-# 7人の場合：cx ± 3s（s=spacing_px）。端キャラが画面内に収まるよう調整する
-STATUS_CHARACTER_SPACING_M = float(_GAME_PARAMS.get('STATUS_CHARACTER_SPACING_M', 0.5))
 
 battle_anim_frame = 0
 member_focus_delay_frame = 0
@@ -531,8 +532,6 @@ BATTLE_COMMAND_PHASE_TO_CHARACTER = {BATTLE_PHASE_COMMAND_DANCER: -1, BATTLE_PHA
 battle_command_phase_order = list(BATTLE_COMMAND_PHASE_CYCLE)  # start_battle()でbattle_focus_characterに応じて再計算する
 
 # バトル参加キャラクターのワールド座標系での基準位置（メートル）。左から右へ
-# バトルメンバーの横間隔（メートル）。人数に関わらず一定。start_battle()で均等配置を計算する
-BATTLE_MEMBER_SPACING_M = 0.8
 battle_character_world_offset_m = {-1: 0.0, -2: 1.5, -3: 3.0, -4: 4.5, -5: -4.5, -6: -3.0, -7: -1.5}
 # 参戦する仲間キャラのID一覧（start_battle()でセットされる。ここはデフォルト値）
 battle_party = [-1, -2, -3, -4, -5, -6, -7]
@@ -715,6 +714,15 @@ def _get_wizard_action():
     """魔導士が現在選択しているアクション名を返す（未定義インデックスは空文字）。"""
     _acts = _CHARA_MASTER['Wizard']['actions']
     return _acts[battle_wizard_menu_selected_index] if 0 <= battle_wizard_menu_selected_index < len(_acts) else ''
+
+def _get_battle_zoom_params():
+    """game_parameters.csv からバトルのズーム演出パラメータを取得して返す。
+    戻り値: (first_m2p, last_m2p, first_ratio, last_ratio)"""
+    first_m2p  = SCREEN_W / float(_GAME_PARAMS.get('BATTLE_MEMBER_FIRST_WINDOW_WIDTH_M', 20/27))
+    last_m2p   = SCREEN_W / float(_GAME_PARAMS.get('BATTLE_MEMBER_LAST_WINDOW_WIDTH_M',  95/27))
+    first_ratio = float(_GAME_PARAMS.get('BATTLE_MEMBER_FIRST_GROUND_Y_FROM_BOTTOM_RATIO',  1/12))
+    last_ratio  = float(_GAME_PARAMS.get('BATTLE_MEMBER_LAST_GROUND_Y_FROM_BOTTOM_RATIO',  -1/3))
+    return first_m2p, last_m2p, first_ratio, last_ratio
 
 def _load_savedata():
     import csv
@@ -1577,7 +1585,7 @@ def initialize():
 
     battle_back_img_raw = raw_img  # オリジナルを保持
 
-    target_h = int(DANCER_HEIGHT_M * BATTLE_MEMBER_FIRST_METER_TO_PIXEL)
+    target_h = int(DANCER_HEIGHT_M * _get_battle_zoom_params()[0])
     scale = target_h / orig_h
 
     battle_back_img = pygame.transform.smoothscale(
@@ -1723,9 +1731,10 @@ def initialize():
 #   攻防フェーズではズームアウトが完了している（focus_t_eased == 1.0）ため、LAST側の定数のみで算出できる）
 # ---------------------------------------------------------
 def get_samurai_base_position():
-    sam_base_bottom_y = SCREEN_H - int(SCREEN_H * BATTLE_MEMBER_LAST_GROUND_Y_FROM_BOTTOM_RATIO)
-    sam_base_img_h = max(1, int(SAMURAI_HEIGHT_M * BATTLE_MEMBER_LAST_METER_TO_PIXEL))
-    sam_base_x = SCREEN_W // 2 + int(battle_character_world_offset_m[-2] * BATTLE_MEMBER_LAST_METER_TO_PIXEL)
+    _, last_m2p, _, last_ratio = _get_battle_zoom_params()
+    sam_base_bottom_y = SCREEN_H - int(SCREEN_H * last_ratio)
+    sam_base_img_h = max(1, int(SAMURAI_HEIGHT_M * last_m2p))
+    sam_base_x = SCREEN_W // 2 + int(battle_character_world_offset_m[-2] * last_m2p)
     return sam_base_x, sam_base_bottom_y, sam_base_img_h
 
 # ---------------------------------------------------------
@@ -2041,8 +2050,8 @@ def start_battle():
     member_zoomout_frame = 0
     member_idle_frame = 0
     member_idle_phase_offset = random.randint(0, BATTLE_MEMBER_IDLE_PERIOD_FRAMES - 1)
-    # ★ 参戦する仲間キャラを savedata.csv の BattleMembers から決定する
-    _members_str = _SAVEDATA.get('BattleMembers', '')
+    # ★ 参戦する仲間キャラを savedata.csv の BattleMembers から決定する（バトルのたびに再読み込み）
+    _members_str = _load_savedata().get('BattleMembers', '')
     _party = [_CHARA_NAME_TO_BATTLE_ID[n.strip()]
               for n in _members_str.split(',') if n.strip() in _CHARA_NAME_TO_BATTLE_ID]
     battle_party = _party if _party else [-1, -2, -3, -4, -5, -6, -7]
@@ -2054,11 +2063,11 @@ def start_battle():
     full_rotated_cycle = BATTLE_COMMAND_PHASE_CYCLE[start_idx:] + BATTLE_COMMAND_PHASE_CYCLE[:start_idx]
     party_phase_set = {BATTLE_FOCUS_CHARACTER_TO_COMMAND_PHASE[c] for c in battle_party}
     battle_command_phase_order = [ph for ph in full_rotated_cycle if ph in party_phase_set]
-    # ★ 立ち位置オフセット：参戦人数に応じて BATTLE_MEMBER_SPACING_M 間隔で均等配置する
+    # ★ 立ち位置オフセット：参戦人数に応じて game_parameters.csv の BATTLE_MEMBER_SPACING_M 間隔で均等配置する
     # 奇数人数: 注視キャラ(=行動順0番)を画面中央(0m)に
     # 偶数人数: 注視キャラ(+spacing/2)と左隣(-spacing/2)の中点を画面中央に
     _N = len(battle_command_phase_order)
-    _S = BATTLE_MEMBER_SPACING_M
+    _S = float(_GAME_PARAMS.get('BATTLE_MEMBER_SPACING_M', 0.8))
     _center_shift = (_S / 2) if (_N % 2 == 0) else 0.0
     _participant_offsets = {}
     for _i, _ph in enumerate(battle_command_phase_order):
@@ -3595,11 +3604,10 @@ def render_battle():
     focus_t_zoom = min(1.0, member_zoomout_frame / BATTLE_MEMBER_ZOOMOUT_FRAMES) \
                    if BATTLE_MEMBER_ZOOMOUT_FRAMES > 0 else 1.0
     focus_t_eased = 1.0 - (1.0 - focus_t_zoom) ** 2
-    focus_meter_to_pixel_start = BATTLE_MEMBER_FIRST_METER_TO_PIXEL
-    focus_meter_to_pixel_end   = BATTLE_MEMBER_LAST_METER_TO_PIXEL
+    focus_meter_to_pixel_start, focus_meter_to_pixel_end, _first_ratio, _last_ratio = _get_battle_zoom_params()
     focus_meter_to_pixel = focus_meter_to_pixel_start + (focus_meter_to_pixel_end - focus_meter_to_pixel_start) * focus_t_eased
-    focus_bottom_y_start = SCREEN_H - int(SCREEN_H * BATTLE_MEMBER_FIRST_GROUND_Y_FROM_BOTTOM_RATIO)
-    focus_bottom_y_end   = SCREEN_H - int(SCREEN_H * BATTLE_MEMBER_LAST_GROUND_Y_FROM_BOTTOM_RATIO)
+    focus_bottom_y_start = SCREEN_H - int(SCREEN_H * _first_ratio)
+    focus_bottom_y_end   = SCREEN_H - int(SCREEN_H * _last_ratio)
     focus_bottom_y = int(focus_bottom_y_start + (focus_bottom_y_end - focus_bottom_y_start) * focus_t_eased)
 
     dancer_base_img_h = max(1, int(DANCER_HEIGHT_M * focus_meter_to_pixel))
@@ -4643,16 +4651,17 @@ def render_result():
             flashout_override = result_flashout_dancer_override
             flashout_height_m = DANCER_HEIGHT_M
             flashout_world_offset_m = battle_character_world_offset_m[-1]
-        flashout_default_x = SCREEN_W // 2 + int(flashout_world_offset_m * BATTLE_MEMBER_LAST_METER_TO_PIXEL)
+        _, _last_m2p, _, _last_ratio = _get_battle_zoom_params()
+        flashout_default_x = SCREEN_W // 2 + int(flashout_world_offset_m * _last_m2p)
 
         if flashout_img_raw:
             orig_w, orig_h = flashout_img_raw.get_size()
             if flashout_override:
                 x, boty, h = flashout_override
             else:
-                h = int(flashout_height_m * BATTLE_MEMBER_LAST_METER_TO_PIXEL)
+                h = int(flashout_height_m * _last_m2p)
                 x = flashout_default_x
-                boty = SCREEN_H - int(SCREEN_H * BATTLE_MEMBER_LAST_GROUND_Y_FROM_BOTTOM_RATIO)
+                boty = SCREEN_H - int(SCREEN_H * _last_ratio)
             w = max(1, int(orig_w * h / orig_h))
             img = pygame.transform.smoothscale(flashout_img_raw, (w, h))
             alpha_img = img.copy()
@@ -4792,9 +4801,8 @@ def render_status():
 
     # ★ 全仲間キャラを身長に応じたサイズで、足元をウィンドウ下端に揃えて均等配置で表示する
     # 並び順・人数は master_data_charas.csv の行順（_CHARA_MASTER のキー順）に従う。
-    # spacing_px はワールド座標 STATUS_CHARACTER_SPACING_M から算出。値を調整すると全員の間隔が変わる
     cx = SCREEN_W // 2
-    spacing_px = int(STATUS_CHARACTER_SPACING_M * STATUS_METER_TO_PIXEL)
+    spacing_px = int(float(_GAME_PARAMS.get('STATUS_CHARACTER_SPACING_M', 0.5)) * STATUS_METER_TO_PIXEL)
 
     clip_rect = pygame.Rect(0, band_y, SCREEN_W, current_height)
     screen.set_clip(clip_rect)
@@ -4844,6 +4852,7 @@ def main():
     while True:
         dt = clock.tick(FIXED_FPS)
         process_input()
+        _reload_game_params_if_changed()
 
         # システムポーズ中はフレーム処理を止める（描画は継続）。
         # Enterキーで1フレームだけ処理を進める要求があった場合のみ、その回だけ処理する。
