@@ -200,14 +200,8 @@ AI_FIELD_BATTLE_START_FRAMES = 90  # フィールドモード：経過後にEキ
 BATTLE_MEMBER_IDLE_PERIOD_FRAMES = 30  # 拡縮1周期のフレーム数
 BATTLE_MEMBER_IDLE_SCALE_DELTA   = 0.02  # 縦横スケールの振れ幅（1.0 ± DELTA）
 
-# 敵キャラクター演出パラメータ：登場時／ズームアウト後それぞれについて、
-# 敵位置にて、バトルウィンドウ幅（=SCREEN_W）がワールド座標系で何mに相当するかを指定する
-# （この値が小さいほど、敵の身長(ENEMY_GOBLIN_HEIGHT_M)に対して画像が大きく＝ズームインして表示される）
-ENEMY_GOBLIN_FIRST_WINDOW_WIDTH_M = 8 / 15  # 登場時（ズームイン状態）
-ENEMY_GOBLIN_LAST_WINDOW_WIDTH_M  = 16 / 3  # 踊り子のズームアウト完了時点
-ENEMY_GOBLIN_FIRST_METER_TO_PIXEL = SCREEN_W / ENEMY_GOBLIN_FIRST_WINDOW_WIDTH_M
-ENEMY_GOBLIN_LAST_METER_TO_PIXEL  = SCREEN_W / ENEMY_GOBLIN_LAST_WINDOW_WIDTH_M
-ENEMY_GROUND_Y_FROM_BOTTOM_RATIO = 0.3  # 敵の足元（接地位置）：画面下端から画面高さの何倍の位置か
+# 敵キャラクター演出パラメータは game_parameters.csv で管理する
+# （ENEMY_GOBLIN_FIRST/LAST_WINDOW_WIDTH_M → SCREEN_W÷幅 で METER_TO_PIXEL を算出）
 ENEMY_X_RATIOS = [0.25, 0.5, 0.75]  # 敵を並べる横位置（画面左端から画面幅の何倍か）を1体ずつ指定
 ENEMY_SILHOUETTE_RELEASE_FRAMES = 15  # 黒シルエットが解除され通常表示になるまでのフレーム数（ズームアウト完了直後から進行）
 ENEMY_IDLE_PERIOD_FRAMES = 30   # 待機モーション：拡縮1周期のフレーム数
@@ -723,6 +717,14 @@ def _get_battle_zoom_params():
     first_ratio = float(_GAME_PARAMS.get('BATTLE_MEMBER_FIRST_GROUND_Y_FROM_BOTTOM_RATIO',  1/12))
     last_ratio  = float(_GAME_PARAMS.get('BATTLE_MEMBER_LAST_GROUND_Y_FROM_BOTTOM_RATIO',  -1/3))
     return first_m2p, last_m2p, first_ratio, last_ratio
+
+def _get_enemy_goblin_params():
+    """game_parameters.csv から敵ゴブリンの演出パラメータを取得して返す。
+    戻り値: (first_m2p, last_m2p, ground_ratio)"""
+    first_m2p   = SCREEN_W / float(_GAME_PARAMS.get('ENEMY_GOBLIN_FIRST_WINDOW_WIDTH_M', 8/15))
+    last_m2p    = SCREEN_W / float(_GAME_PARAMS.get('ENEMY_GOBLIN_LAST_WINDOW_WIDTH_M',  16/3))
+    ground_ratio = float(_GAME_PARAMS.get('ENEMY_GROUND_Y_FROM_BOTTOM_RATIO', 0.3))
+    return first_m2p, last_m2p, ground_ratio
 
 def _load_savedata():
     import csv
@@ -3375,7 +3377,7 @@ def draw_slash_triangle(p1, p2, frame, hold_frames=BATTLE_SLASH_HOLD_FRAMES):
 
     # 軌跡の方向に対して垂直な単位ベクトル（底辺の方向）
     nx, ny = -dy / length, dx / length
-    half_base = (BATTLE_SLASH_BASE_WIDTH_M * ENEMY_GOBLIN_LAST_METER_TO_PIXEL) / 2.0
+    half_base = (BATTLE_SLASH_BASE_WIDTH_M * _get_enemy_goblin_params()[1]) / 2.0
 
     points = [
         seg_end,
@@ -3705,8 +3707,9 @@ def render_battle():
                        if BATTLE_MEMBER_ZOOMOUT_FRAMES > 0 else 1.0
         enemy_t_eased = 1.0 - (1.0 - enemy_t_zoom) ** 2
 
-        enemy_start_img_h = int(ENEMY_GOBLIN_HEIGHT_M * ENEMY_GOBLIN_FIRST_METER_TO_PIXEL)
-        enemy_end_img_h   = int(ENEMY_GOBLIN_HEIGHT_M * ENEMY_GOBLIN_LAST_METER_TO_PIXEL)
+        _eg_first_m2p, _eg_last_m2p, _eg_ground_ratio = _get_enemy_goblin_params()
+        enemy_start_img_h = int(ENEMY_GOBLIN_HEIGHT_M * _eg_first_m2p)
+        enemy_end_img_h   = int(ENEMY_GOBLIN_HEIGHT_M * _eg_last_m2p)
         enemy_img_h = max(1, int(enemy_start_img_h + (enemy_end_img_h - enemy_start_img_h) * enemy_t_eased))
 
         enemy_img_w = max(1, int(enemy_orig_w * enemy_img_h / enemy_orig_h))
@@ -3715,8 +3718,7 @@ def render_battle():
         reveal_t = min(1.0, enemy_silhouette_frame / ENEMY_SILHOUETTE_RELEASE_FRAMES) \
                    if ENEMY_SILHOUETTE_RELEASE_FRAMES > 0 else 1.0
 
-        # 足元位置は登場時から変えない（ENEMY_GROUND_Y_FROM_BOTTOM_RATIO基準で固定）
-        enemy_bottom_y = SCREEN_H - int(SCREEN_H * ENEMY_GROUND_Y_FROM_BOTTOM_RATIO)
+        enemy_bottom_y = SCREEN_H - int(SCREEN_H * _eg_ground_ratio)
 
         # ★ 敵の攻撃演出（踊り子に接近 → 最接近で停止 → 元の位置へ後退）の進行度
         enemy_attack_active = (battle_phase == BATTLE_PHASE_EXCHANGE
@@ -4596,9 +4598,10 @@ def render_result():
             _clip = pygame.Rect(0, band_y, SCREEN_W, BATTLE_MAIN_WINDOW_HEIGHT)
             screen.set_clip(_clip)
             _orig_w, _orig_h = enemy_img_raw.get_size()
-            _eih = max(1, int(ENEMY_GOBLIN_HEIGHT_M * ENEMY_GOBLIN_LAST_METER_TO_PIXEL))
+            _, _eg_last_m2p, _eg_ground_ratio = _get_enemy_goblin_params()
+            _eih = max(1, int(ENEMY_GOBLIN_HEIGHT_M * _eg_last_m2p))
             _eiw = max(1, int(_orig_w * _eih / _orig_h))
-            _eby = SCREEN_H - int(SCREEN_H * ENEMY_GROUND_Y_FROM_BOTTOM_RATIO)
+            _eby = SCREEN_H - int(SCREEN_H * _eg_ground_ratio)
             _ex  = int(SCREEN_W * ENEMY_X_RATIOS[_ki])
             _dhp = get_damage_display_hp(enemy_damage_anim_old_hp[_ki], enemy_damage_anim_new_hp[_ki], enemy_damage_anim_frame[_ki])
             _raw = apply_hp_grayscale(enemy_img_raw, "goblin_idle.png", ENEMY_GOBLIN_HEIGHT_M, int(round(_dhp)), GOBLIN_MAX_HP)
