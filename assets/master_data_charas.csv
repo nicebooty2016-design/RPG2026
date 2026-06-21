@@ -1,11 +1,11 @@
 Name,Label,Height,Actions
-Dancer,踊り子,1.8,
-Samurai,サムライ,1.4,
-Warrior,女戦士,2,
-Sister,シス,1.5,
-Wizard,魔導士,1.7,
-Figher,武闘家,1.8,
-Kunoichi,くノ一,1.65,
+Dancer,踊り子,1.8,"ムチ, 炎, マカダンス"
+Samurai,サムライ,1.4,"刀, 音速剣, 心眼剣"
+Warrior,女戦士,2,斧
+Sister,シスター,1.5,"ツララ落とし, 生命の雫"
+Wizard,魔導士,1.7,"火炎放射, 火竜変化"
+Fighter,武闘家,1.8,"拳脚, 百裂拳"
+Kunoichi,くノ一,1.65,"手裏剣, 華火"
 ,,,
 ,,,
 ,,,

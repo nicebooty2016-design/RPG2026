@@ -193,7 +193,7 @@ ENEMY_IDLE_PERIOD_FRAMES = 30   # 待機モーション：拡縮1周期のフレ
 ENEMY_IDLE_SCALE_DELTA   = 0.02  # 待機モーション：縦横スケールの振れ幅（1.0 ± DELTA）
 
 # 攻撃選択サブウィンドウ
-BATTLE_MENU_OPTIONS = ["ムチ", "炎", "マカダンス"]  # 攻撃手段の選択肢（上から順に表示）
+# 各キャラの選択肢は起動時に master_data_charas.csv の Actions カラムから _CHARA_MASTER へ読み込む
 
 # サイズ・余白・枠線太さ・行間はSCREEN_W_BASEを基準に設定されているため、SCREEN_Wに応じてFONT_SCALEで拡縮する
 BATTLE_MENU_WIDTH  = int(160 * FONT_SCALE)  # サブウィンドウの幅（px）
@@ -220,25 +220,12 @@ BATTLE_MENU_UNSELECTED_COLOR = (120, 120, 120)  # 非選択時の文字色（グ
 # 攻防ステート（コマンド実行後、専用の演出を行う期間。コマンドウィンドウは非表示）
 BATTLE_EXCHANGE_FRAMES = 30  # 攻防ステートが継続するフレーム数（未実装の攻撃手段で使用。経過後はコマンド選択ステートへ戻る）
 
-BATTLE_MENU_INDEX_WHIP  = 0  # BATTLE_MENU_OPTIONS内の「ムチ」のインデックス
-BATTLE_MENU_INDEX_FLAME = 1  # BATTLE_MENU_OPTIONS内の「炎」のインデックス
-BATTLE_MENU_INDEX_DANCE = 2  # BATTLE_MENU_OPTIONS内の「マカダンス」のインデックス
-
-# サムライの行動選択肢（踊り子の選択後に表示）
-SAMURAI_MENU_OPTIONS = ["刀", "音速剣", "心眼剣"]
+# サムライの行動選択肢インデックス（CSVのActions順と一致させること）
 SAMURAI_MENU_INDEX_SWORD      = 0
 SAMURAI_MENU_INDEX_SONICKEN   = 1
 SAMURAI_MENU_INDEX_SHINGANKEN = 2
 
-# 女戦士の行動選択肢（サムライの選択後に表示）
-WARRIOR_MENU_OPTIONS = ["斧"]
 WARRIOR_MENU_INDEX_AXE = 0
-
-# シスター・くノ一・魔法使い・武道家の行動選択肢（いずれも全て踊り子のムチと同じ挙動）
-SISTER_MENU_OPTIONS   = ["ツララ落とし", "生命の雫"]
-KUNOICHI_MENU_OPTIONS = ["手裏剣", "華火"]
-WIZARD_MENU_OPTIONS   = ["火炎放射", "火竜変化"]
-FIGHTER_MENU_OPTIONS  = ["拳脚", "百裂拳"]
 
 # 攻撃手段ごとの攻撃ボイス再生候補：bunny_attack_<番号>.mp3 の番号で指定する（再生時にこの中からランダムに選ぶ）
 BATTLE_WHIP_ATTACK_VOICE_NUMBERS  = (1, 1)  # ムチ攻撃時に再生するボイス候補
@@ -691,20 +678,33 @@ def _load_chara_master():
     _path = os.path.join(os.path.dirname(__file__), '..', 'assets', 'master_data_charas.csv')
     result = {}
     with open(_path, encoding='utf-8', newline='') as _f:
-        for _id, _row in enumerate(csv.DictReader(_f), start=1):
-            if not _row['Name']:  # 空行はスキップ
+        for _row in csv.DictReader(_f):
+            _name = (_row.get('Name') or '').strip()
+            if not _name:  # 空行はスキップ
                 continue
-            result[_id] = {'name': _row['Name'], 'label': _row['Label'], 'height': float(_row['Height'])}
+            _actions_str = (_row.get('Actions') or '').strip()
+            result[_name] = {
+                'name': _name,
+                'label': (_row.get('Label') or '').strip(),
+                'height': float(_row.get('Height') or 0),
+                'actions': [a.strip() for a in _actions_str.split(',') if a.strip()],
+            }
     return result
 
 _CHARA_MASTER = _load_chara_master()
-DANCER_HEIGHT_M   = _CHARA_MASTER[1]['height']
-SAMURAI_HEIGHT_M  = _CHARA_MASTER[2]['height']
-WARRIOR_HEIGHT_M  = _CHARA_MASTER[3]['height']
-SISTER_HEIGHT_M   = _CHARA_MASTER[4]['height']
-KUNOICHI_HEIGHT_M = _CHARA_MASTER[5]['height']
-WIZARD_HEIGHT_M   = _CHARA_MASTER[6]['height']
-FIGHTER_HEIGHT_M  = _CHARA_MASTER[7]['height']
+
+def _get_dancer_action():
+    """踊り子が現在選択しているアクション名を返す（未定義インデックスは空文字）。"""
+    _acts = _CHARA_MASTER['Dancer']['actions']
+    return _acts[battle_menu_selected_index] if 0 <= battle_menu_selected_index < len(_acts) else ''
+
+DANCER_HEIGHT_M   = _CHARA_MASTER['Dancer']['height']
+SAMURAI_HEIGHT_M  = _CHARA_MASTER['Samurai']['height']
+WARRIOR_HEIGHT_M  = _CHARA_MASTER['Warrior']['height']
+SISTER_HEIGHT_M   = _CHARA_MASTER['Sister']['height']
+KUNOICHI_HEIGHT_M = _CHARA_MASTER['Kunoichi']['height']
+WIZARD_HEIGHT_M   = _CHARA_MASTER['Wizard']['height']
+FIGHTER_HEIGHT_M  = _CHARA_MASTER['Fighter']['height']
 ENEMY_GOBLIN_HEIGHT_M = 1.2  # ゴブリンの身長（メートル）。立ち姿画像のデバッグ表示（実際の絵の上端の算出）に使用
 
 HP_GRAYSCALE_DARKNESS = 0.5  # HP低下によるグレースケール表示の暗さ（1=通常のグレースケール、0=真っ黒）
@@ -1274,7 +1274,7 @@ def load_attack_voices():
 #                      実際に読み込めたものをランダムに選んで再生する
 # ---------------------------------------------------------
 def play_attack_voice():
-    numbers = (BATTLE_FLAME_ATTACK_VOICE_NUMBERS if battle_menu_selected_index == BATTLE_MENU_INDEX_FLAME
+    numbers = (BATTLE_FLAME_ATTACK_VOICE_NUMBERS if _get_dancer_action() == '炎'
                else BATTLE_WHIP_ATTACK_VOICE_NUMBERS)
     candidates = [voice_attack_by_number[n] for n in numbers if n in voice_attack_by_number]
     if candidates:
@@ -1314,11 +1314,12 @@ def start_battle_turn():
     attacker = battle_turn_order[battle_turn_index]
     if attacker == -1:
         battle_attacking_enemy_index = -1
-        if battle_menu_selected_index == BATTLE_MENU_INDEX_FLAME:
+        _da = _get_dancer_action()
+        if _da == '炎':
             battle_flame_phase = BATTLE_FLAME_PHASE_CAST
             battle_flame_frame = 0
             play_attack_voice()
-        elif battle_menu_selected_index == BATTLE_MENU_INDEX_DANCE:
+        elif _da == 'マカダンス':
             battle_dance_phase = BATTLE_DANCE_PHASE_SINK
             battle_dance_frame = 0
             pygame.mixer.music.load(BGM_BATTLE_PATH)
@@ -1326,7 +1327,7 @@ def start_battle_turn():
             pygame.mixer.music.play(start=BATTLE_DANCE_BGM_START_SEC)
             #if voice_dance:
                 #voice_dance.play()
-        else:
+        else:  # ムチ、または未実装アクション → ムチと同じ挙動
             battle_whip_phase = BATTLE_WHIP_PHASE_APPROACH
             battle_whip_frame = 0
             play_attack_voice()
@@ -1402,7 +1403,7 @@ def advance_battle_turn():
             battle_turn_index += 1
             continue
         # 攻撃対象が既に倒されている場合：この番をスキップする
-        if (attacker == -1 and battle_menu_selected_index == BATTLE_MENU_INDEX_WHIP
+        if (attacker == -1 and _get_dancer_action() not in ('炎', 'マカダンス')
                 and enemy_defeated[battle_target_enemy_index]):
             battle_turn_index += 1
             continue
@@ -1813,11 +1814,8 @@ def battle_seventh_command_phase():
     return battle_command_phase_order[6]
 
 
-# ---------------------------------------------------------
-# サムライの行動選択肢を返す（マカダンスでバフがかかる前は「刀」のみ、バフ後は「心眼剣」のみ）
-# ---------------------------------------------------------
 def get_samurai_menu_options():
-    return SAMURAI_MENU_OPTIONS
+    return _CHARA_MASTER['Samurai']['actions']
 
 # ---------------------------------------------------------
 # バトルのコマンド選択操作：人間のキー入力／AIユーザモードの双方から呼び出される共通処理
@@ -1829,19 +1827,19 @@ def battle_menu_cursor_step(direction):
     global battle_sister_menu_selected_index, battle_kunoichi_menu_selected_index
     global battle_wizard_menu_selected_index, battle_fighter_menu_selected_index
     if battle_phase == BATTLE_PHASE_COMMAND_DANCER:
-        battle_menu_selected_index = (battle_menu_selected_index + direction) % len(BATTLE_MENU_OPTIONS)
+        battle_menu_selected_index = (battle_menu_selected_index + direction) % len(_CHARA_MASTER['Dancer']['actions'])
     elif battle_phase == BATTLE_PHASE_COMMAND_SAMURAI:
         battle_samurai_menu_selected_index = (battle_samurai_menu_selected_index + direction) % len(get_samurai_menu_options())
     elif battle_phase == BATTLE_PHASE_COMMAND_WARRIOR:
-        battle_warrior_menu_selected_index = (battle_warrior_menu_selected_index + direction) % len(WARRIOR_MENU_OPTIONS)
+        battle_warrior_menu_selected_index = (battle_warrior_menu_selected_index + direction) % len(_CHARA_MASTER['Warrior']['actions'])
     elif battle_phase == BATTLE_PHASE_COMMAND_SISTER:
-        battle_sister_menu_selected_index = (battle_sister_menu_selected_index + direction) % len(SISTER_MENU_OPTIONS)
+        battle_sister_menu_selected_index = (battle_sister_menu_selected_index + direction) % len(_CHARA_MASTER['Sister']['actions'])
     elif battle_phase == BATTLE_PHASE_COMMAND_KUNOICHI:
-        battle_kunoichi_menu_selected_index = (battle_kunoichi_menu_selected_index + direction) % len(KUNOICHI_MENU_OPTIONS)
+        battle_kunoichi_menu_selected_index = (battle_kunoichi_menu_selected_index + direction) % len(_CHARA_MASTER['Kunoichi']['actions'])
     elif battle_phase == BATTLE_PHASE_COMMAND_WIZARD:
-        battle_wizard_menu_selected_index = (battle_wizard_menu_selected_index + direction) % len(WIZARD_MENU_OPTIONS)
+        battle_wizard_menu_selected_index = (battle_wizard_menu_selected_index + direction) % len(_CHARA_MASTER['Wizard']['actions'])
     elif battle_phase == BATTLE_PHASE_COMMAND_FIGHTER:
-        battle_fighter_menu_selected_index = (battle_fighter_menu_selected_index + direction) % len(FIGHTER_MENU_OPTIONS)
+        battle_fighter_menu_selected_index = (battle_fighter_menu_selected_index + direction) % len(_CHARA_MASTER['Fighter']['actions'])
 
 
 def battle_target_cursor_step(direction):
@@ -1849,11 +1847,11 @@ def battle_target_cursor_step(direction):
     global battle_target_enemy_index, battle_samurai_target_enemy_index, battle_warrior_target_enemy_index
     global battle_sister_target_enemy_index, battle_kunoichi_target_enemy_index
     global battle_wizard_target_enemy_index, battle_fighter_target_enemy_index
-    if battle_phase == BATTLE_PHASE_COMMAND_DANCER and battle_menu_selected_index == BATTLE_MENU_INDEX_WHIP:
+    if battle_phase == BATTLE_PHASE_COMMAND_DANCER and _get_dancer_action() not in ('炎', 'マカダンス'):
         battle_target_enemy_index = find_alive_enemy_index(battle_target_enemy_index, direction)
     elif battle_phase == BATTLE_PHASE_COMMAND_SAMURAI:
         battle_samurai_target_enemy_index = find_alive_enemy_index(battle_samurai_target_enemy_index, direction)
-    elif battle_phase == BATTLE_PHASE_COMMAND_WARRIOR and battle_warrior_menu_selected_index == WARRIOR_MENU_INDEX_AXE:
+    elif battle_phase == BATTLE_PHASE_COMMAND_WARRIOR:
         battle_warrior_target_enemy_index = find_alive_enemy_index(battle_warrior_target_enemy_index, direction)
     elif battle_phase == BATTLE_PHASE_COMMAND_SISTER:
         battle_sister_target_enemy_index = find_alive_enemy_index(battle_sister_target_enemy_index, direction)
@@ -2143,9 +2141,10 @@ def process_ai_battle_input():
         return
 
     if battle_phase == BATTLE_PHASE_COMMAND_DANCER:
-        menu_options = BATTLE_MENU_OPTIONS
+        menu_options = _CHARA_MASTER['Dancer']['actions']
         current_menu_index = battle_menu_selected_index
-        target_selection_indices = (BATTLE_MENU_INDEX_WHIP,)
+        # 炎・マカダンス以外（ムチまたは未実装）は単体対象のため、対応インデックスを動的に取得
+        target_selection_indices = tuple(i for i, a in enumerate(menu_options) if a not in ('炎', 'マカダンス'))
         current_target_index = battle_target_enemy_index
     elif battle_phase == BATTLE_PHASE_COMMAND_SAMURAI:
         menu_options = get_samurai_menu_options()
@@ -2153,40 +2152,42 @@ def process_ai_battle_input():
         target_selection_indices = (SAMURAI_MENU_INDEX_SWORD, SAMURAI_MENU_INDEX_SONICKEN, SAMURAI_MENU_INDEX_SHINGANKEN)
         current_target_index = battle_samurai_target_enemy_index
     elif battle_phase == BATTLE_PHASE_COMMAND_WARRIOR:
-        menu_options = WARRIOR_MENU_OPTIONS
+        menu_options = _CHARA_MASTER['Warrior']['actions']
         current_menu_index = battle_warrior_menu_selected_index
-        target_selection_indices = (WARRIOR_MENU_INDEX_AXE,)
+        target_selection_indices = tuple(range(len(menu_options)))
         current_target_index = battle_warrior_target_enemy_index
     elif battle_phase == BATTLE_PHASE_COMMAND_SISTER:
-        menu_options = SISTER_MENU_OPTIONS
+        menu_options = _CHARA_MASTER['Sister']['actions']
         current_menu_index = battle_sister_menu_selected_index
-        target_selection_indices = tuple(range(len(SISTER_MENU_OPTIONS)))
+        target_selection_indices = tuple(range(len(menu_options)))
         current_target_index = battle_sister_target_enemy_index
     elif battle_phase == BATTLE_PHASE_COMMAND_KUNOICHI:
-        menu_options = KUNOICHI_MENU_OPTIONS
+        menu_options = _CHARA_MASTER['Kunoichi']['actions']
         current_menu_index = battle_kunoichi_menu_selected_index
-        target_selection_indices = tuple(range(len(KUNOICHI_MENU_OPTIONS)))
+        target_selection_indices = tuple(range(len(menu_options)))
         current_target_index = battle_kunoichi_target_enemy_index
     elif battle_phase == BATTLE_PHASE_COMMAND_WIZARD:
-        menu_options = WIZARD_MENU_OPTIONS
+        menu_options = _CHARA_MASTER['Wizard']['actions']
         current_menu_index = battle_wizard_menu_selected_index
-        target_selection_indices = tuple(range(len(WIZARD_MENU_OPTIONS)))
+        target_selection_indices = tuple(range(len(menu_options)))
         current_target_index = battle_wizard_target_enemy_index
     else:  # BATTLE_PHASE_COMMAND_FIGHTER
-        menu_options = FIGHTER_MENU_OPTIONS
+        menu_options = _CHARA_MASTER['Fighter']['actions']
         current_menu_index = battle_fighter_menu_selected_index
-        target_selection_indices = tuple(range(len(FIGHTER_MENU_OPTIONS)))
+        target_selection_indices = tuple(range(len(menu_options)))
         current_target_index = battle_fighter_target_enemy_index
 
     if ai_command_step == AI_COMMAND_STEP_DECIDE:
         # 行動を完全ランダムに決定し、メニューカーソルを近い方向から目標位置へ合わせ始める
         # ★ マカダンスはバトル中1回のみ使用可能（既に使用済みの場合は選択肢から除外する）
         if battle_phase == BATTLE_PHASE_COMMAND_DANCER and dancer_macadance_used:
-            candidate_indices = [i for i in range(len(menu_options)) if i != BATTLE_MENU_INDEX_DANCE]
-            ai_menu_target_index = random.choice(candidate_indices)
+            _dance_idx = next((i for i, a in enumerate(menu_options) if a == 'マカダンス'), None)
+            candidate_indices = [i for i in range(len(menu_options)) if i != _dance_idx]
+            ai_menu_target_index = random.choice(candidate_indices) if candidate_indices else random.randrange(len(menu_options))
         else:
             ai_menu_target_index = random.randrange(len(menu_options))
-            if battle_phase == BATTLE_PHASE_COMMAND_DANCER and ai_menu_target_index == BATTLE_MENU_INDEX_DANCE:
+            if (battle_phase == BATTLE_PHASE_COMMAND_DANCER
+                    and menu_options[ai_menu_target_index] == 'マカダンス'):
                 dancer_macadance_used = True
         ai_menu_step_dir = ai_cyclic_step_direction(current_menu_index, ai_menu_target_index, len(menu_options))
         ai_command_step = AI_COMMAND_STEP_MENU_CURSOR
@@ -2567,8 +2568,8 @@ def update(dt):
 
         # ④.5 攻防ステート：コマンド実行後、専用の演出を行いコマンド選択ステートへ戻る
         if battle_phase == BATTLE_PHASE_EXCHANGE:
-            if battle_menu_selected_index in (BATTLE_MENU_INDEX_WHIP, BATTLE_MENU_INDEX_FLAME, BATTLE_MENU_INDEX_DANCE):
-                # 攻防ステート（ムチ・炎・マカダンス選択時）：踊り子と生存中の敵全体が、ランダムに決定された行動順（battle_turn_order）に
+            if battle_menu_selected_index < len(_CHARA_MASTER['Dancer']['actions']):
+                # 攻防ステート：踊り子と生存中の敵全体が、ランダムに決定された行動順（battle_turn_order）に
                 # 従って1体ずつ「接近 → 攻撃」（マカダンスの場合は専用演出）を行う。一巡したらコマンド選択ステートへ戻る
                 if battle_attacking_enemy_index == -1:
                     attacker = battle_turn_order[battle_turn_index]
@@ -2951,8 +2952,70 @@ def update(dt):
                             if battle_fighter_whip_frame >= BATTLE_WHIP_APPROACH_FRAMES:
                                 battle_fighter_target_enemy_index = find_alive_enemy_index(battle_fighter_target_enemy_index, 1)
                                 advance_battle_turn()
-                    elif battle_menu_selected_index == BATTLE_MENU_INDEX_WHIP:
-                        # ムチ：攻撃対象（battle_target_enemy_index）を攻撃する
+                    elif _get_dancer_action() == '炎':
+                        # 炎：その場にとどまったまま詠唱し（攻撃ボイスは番開始時に再生済み）、
+                        # 一定フレーム待機後、生存中の敵全体に同時に赤色点滅ダメージを与える
+                        if battle_flame_phase == BATTLE_FLAME_PHASE_CAST:
+                            battle_flame_frame += 1
+                            if battle_flame_frame >= BATTLE_FLAME_CAST_DELAY_FRAMES:
+                                battle_flame_phase = BATTLE_FLAME_PHASE_FLASH
+                                battle_flame_frame = 0
+                                if voice_goblin_damaged:
+                                    voice_goblin_damaged.play()
+                        elif battle_flame_phase == BATTLE_FLAME_PHASE_FLASH:
+                            battle_flame_frame += 1
+                            if battle_flame_frame >= BATTLE_WHIP_FLASH_FRAMES:
+                                # ダメージ演出完了の瞬間に、生存中の敵全体へ個別にランダムダメージを与えてHPを更新する
+                                # （0未満にはならない。0になった敵はその場で撃破扱いとなり、同時に殲滅演出を開始する）
+                                newly_defeated = []
+                                for i in range(len(enemy_defeated)):
+                                    if enemy_defeated[i]:
+                                        continue
+                                    damage = random.randint(BATTLE_FLAME_DAMAGE_MIN, BATTLE_FLAME_DAMAGE_MAX)
+                                    # ★ ダメージ表現アニメーション：更新前の見た目HPを起点に、更新後の実HPへ向けたアニメを開始する
+                                    old_display_hp = get_damage_display_hp(enemy_damage_anim_old_hp[i], enemy_damage_anim_new_hp[i], enemy_damage_anim_frame[i])
+                                    enemy_hp[i] = max(0, enemy_hp[i] - damage)
+                                    enemy_damage_anim_old_hp[i] = old_display_hp
+                                    enemy_damage_anim_new_hp[i] = enemy_hp[i]
+                                    enemy_damage_anim_frame[i]  = 0
+                                    enemy_damage_anim_flash_color[i] = DAMAGE_FLASH_COLOR_FLAME
+                                    if enemy_hp[i] <= 0:
+                                        enemy_defeated[i] = True
+                                        newly_defeated.append(i)
+
+                                if newly_defeated:
+                                    battle_annihilate_targets = newly_defeated
+                                    battle_annihilate_frame   = 0
+
+                                if all(enemy_defeated):
+                                    # 全滅：踊り子は接近していないため、後退や表示位置の上書きは不要
+                                    enter_result_state()
+                                else:
+                                    advance_battle_turn()
+                    elif _get_dancer_action() == 'マカダンス':
+                        # マカダンス：待機モーションの踊り子が画面下に消える → バトルウィンドウがピンクに染まりダンスを再生
+                        # （仲間がいないため、演出が終わったらそのまま次の番へ進む）
+                        if battle_dance_phase == BATTLE_DANCE_PHASE_SINK:
+                            battle_dance_frame += 1
+                            if battle_dance_frame >= BATTLE_DANCE_SINK_FRAMES:
+                                battle_dance_phase = BATTLE_DANCE_PHASE_DANCE
+                                battle_dance_frame = 0
+                        elif battle_dance_phase == BATTLE_DANCE_PHASE_DANCE:
+                            battle_dance_frame += 1
+                            if battle_dance_frame >= BATTLE_DANCE_SCROLL_FRAMES:
+                                pygame.mixer.music.stop()
+                                # ★ マカダンスBGM代用で上書きされたため、勝利BGM代用（battle.mp3の指定秒数）の
+                                # 先読みシークをやり直し、無音・一時停止の状態に戻しておく
+                                # （これをしないと、リザルトでのunpause()が「停止中」の音楽に対する操作になり鳴らない）
+                                pygame.mixer.music.load(BGM_BATTLE_PATH)
+                                pygame.mixer.music.set_volume(0.0)
+                                pygame.mixer.music.play(start=RESULT_WIN_BGM_START_SEC)
+                                pygame.mixer.music.pause()
+                                # ★ サムライのピンク点滅演出が終わったので、以後バトル終了まで「心眼剣」を使用可能にする
+                                samurai_powered_up = True
+                                advance_battle_turn()
+                    else:
+                        # ムチ（または未実装アクション）：攻撃対象（battle_target_enemy_index）を攻撃する
                         # （接近 → 最接近（攻撃ボイス再生） → ダメージ待機 → 白色点滅 → 元の位置へ後退）
                         if battle_whip_phase == BATTLE_WHIP_PHASE_APPROACH:
                             battle_whip_frame += 1
@@ -3006,68 +3069,6 @@ def update(dt):
                                 # 元の位置に戻り終えたら、撃破した敵の次に生存している敵を選択し、次の番へ進める
                                 # （後退アニメ完了後に変更することで、後退中に対象が別の敵の位置に切り替わって見える不具合を防ぐ）
                                 battle_target_enemy_index = find_alive_enemy_index(battle_target_enemy_index, 1)
-                                advance_battle_turn()
-                    elif battle_menu_selected_index == BATTLE_MENU_INDEX_FLAME:
-                        # 炎：その場にとどまったまま詠唱し（攻撃ボイスは番開始時に再生済み）、
-                        # 一定フレーム待機後、生存中の敵全体に同時に赤色点滅ダメージを与える
-                        if battle_flame_phase == BATTLE_FLAME_PHASE_CAST:
-                            battle_flame_frame += 1
-                            if battle_flame_frame >= BATTLE_FLAME_CAST_DELAY_FRAMES:
-                                battle_flame_phase = BATTLE_FLAME_PHASE_FLASH
-                                battle_flame_frame = 0
-                                if voice_goblin_damaged:
-                                    voice_goblin_damaged.play()
-                        elif battle_flame_phase == BATTLE_FLAME_PHASE_FLASH:
-                            battle_flame_frame += 1
-                            if battle_flame_frame >= BATTLE_WHIP_FLASH_FRAMES:
-                                # ダメージ演出完了の瞬間に、生存中の敵全体へ個別にランダムダメージを与えてHPを更新する
-                                # （0未満にはならない。0になった敵はその場で撃破扱いとなり、同時に殲滅演出を開始する）
-                                newly_defeated = []
-                                for i in range(len(enemy_defeated)):
-                                    if enemy_defeated[i]:
-                                        continue
-                                    damage = random.randint(BATTLE_FLAME_DAMAGE_MIN, BATTLE_FLAME_DAMAGE_MAX)
-                                    # ★ ダメージ表現アニメーション：更新前の見た目HPを起点に、更新後の実HPへ向けたアニメを開始する
-                                    old_display_hp = get_damage_display_hp(enemy_damage_anim_old_hp[i], enemy_damage_anim_new_hp[i], enemy_damage_anim_frame[i])
-                                    enemy_hp[i] = max(0, enemy_hp[i] - damage)
-                                    enemy_damage_anim_old_hp[i] = old_display_hp
-                                    enemy_damage_anim_new_hp[i] = enemy_hp[i]
-                                    enemy_damage_anim_frame[i]  = 0
-                                    enemy_damage_anim_flash_color[i] = DAMAGE_FLASH_COLOR_FLAME
-                                    if enemy_hp[i] <= 0:
-                                        enemy_defeated[i] = True
-                                        newly_defeated.append(i)
-
-                                if newly_defeated:
-                                    battle_annihilate_targets = newly_defeated
-                                    battle_annihilate_frame   = 0
-
-                                if all(enemy_defeated):
-                                    # 全滅：踊り子は接近していないため、後退や表示位置の上書きは不要
-                                    enter_result_state()
-                                else:
-                                    advance_battle_turn()
-                    else:
-                        # マカダンス：待機モーションの踊り子が画面下に消える → バトルウィンドウがピンクに染まりダンスを再生
-                        # （仲間がいないため、演出が終わったらそのまま次の番へ進む）
-                        if battle_dance_phase == BATTLE_DANCE_PHASE_SINK:
-                            battle_dance_frame += 1
-                            if battle_dance_frame >= BATTLE_DANCE_SINK_FRAMES:
-                                battle_dance_phase = BATTLE_DANCE_PHASE_DANCE
-                                battle_dance_frame = 0
-                        elif battle_dance_phase == BATTLE_DANCE_PHASE_DANCE:
-                            battle_dance_frame += 1
-                            if battle_dance_frame >= BATTLE_DANCE_SCROLL_FRAMES:
-                                pygame.mixer.music.stop()
-                                # ★ マカダンスBGM代用で上書きされたため、勝利BGM代用（battle.mp3の指定秒数）の
-                                # 先読みシークをやり直し、無音・一時停止の状態に戻しておく
-                                # （これをしないと、リザルトでのunpause()が「停止中」の音楽に対する操作になり鳴らない）
-                                pygame.mixer.music.load(BGM_BATTLE_PATH)
-                                pygame.mixer.music.set_volume(0.0)
-                                pygame.mixer.music.play(start=RESULT_WIN_BGM_START_SEC)
-                                pygame.mixer.music.pause()
-                                # ★ サムライのピンク点滅演出が終わったので、以後バトル終了まで「心眼剣」を使用可能にする
-                                samurai_powered_up = True
                                 advance_battle_turn()
                 else:
                     # 敵の番：battle_attacking_enemy_index の敵が踊り子に接近して攻撃する（流れはムチと同じ4ステート）
@@ -3590,7 +3591,7 @@ def render_battle():
     fighter_base_x  = SCREEN_W // 2 + int(battle_character_world_offset_m[-7] * focus_meter_to_pixel)
 
     # ★ マカダンス：踊り子が画面下に消えた後、バトルウィンドウがピンクに染まりダンス画像を再生する
-    dance_active = (battle_phase == BATTLE_PHASE_EXCHANGE and battle_menu_selected_index == BATTLE_MENU_INDEX_DANCE
+    dance_active = (battle_phase == BATTLE_PHASE_EXCHANGE and _get_dancer_action() == 'マカダンス'
                     and battle_attacking_enemy_index == -1 and battle_turn_order[battle_turn_index] == -1
                     and battle_dance_phase == BATTLE_DANCE_PHASE_DANCE)
 
@@ -3669,7 +3670,7 @@ def render_battle():
 
         # ★ 敵の攻撃演出（踊り子に接近 → 最接近で停止 → 元の位置へ後退）の進行度
         enemy_attack_active = (battle_phase == BATTLE_PHASE_EXCHANGE
-                               and battle_menu_selected_index in (BATTLE_MENU_INDEX_WHIP, BATTLE_MENU_INDEX_FLAME, BATTLE_MENU_INDEX_DANCE)
+                               and battle_menu_selected_index < len(_CHARA_MASTER['Dancer']['actions'])
                                and battle_attacking_enemy_index >= 0)
         enemy_attack_t = 0.0
         if enemy_attack_active:
@@ -3822,11 +3823,11 @@ def render_battle():
         # HPデバッグ表示と被らないよう、頭上のクリアランスにテキスト分の高さも加味して上方へ表示する
         cursor_target_indices = []
         if member_zoomout_frame >= BATTLE_MEMBER_ZOOMOUT_FRAMES:
-            if battle_phase == BATTLE_PHASE_COMMAND_DANCER and battle_menu_selected_index in (BATTLE_MENU_INDEX_WHIP, BATTLE_MENU_INDEX_FLAME):
-                if battle_menu_selected_index == BATTLE_MENU_INDEX_WHIP:
-                    cursor_target_indices = [battle_target_enemy_index] if 0 <= battle_target_enemy_index < len(enemy_rects) else []
-                else:
+            if battle_phase == BATTLE_PHASE_COMMAND_DANCER and _get_dancer_action() != 'マカダンス':
+                if _get_dancer_action() == '炎':
                     cursor_target_indices = [i for i in range(len(enemy_rects)) if not enemy_defeated[i]]
+                else:  # ムチまたは未実装 → 単体
+                    cursor_target_indices = [battle_target_enemy_index] if 0 <= battle_target_enemy_index < len(enemy_rects) else []
             elif battle_phase == BATTLE_PHASE_COMMAND_SAMURAI:
                 cursor_target_indices = [battle_samurai_target_enemy_index] if 0 <= battle_samurai_target_enemy_index < len(enemy_rects) else []
 
@@ -3858,7 +3859,7 @@ def render_battle():
         dancer_x = dancer_base_x
 
         # ★ マカダンス：待機モーションの踊り子がバトルウィンドウ下端の外側まで沈み、画面下に消える
-        dance_sinking = (battle_phase == BATTLE_PHASE_EXCHANGE and battle_menu_selected_index == BATTLE_MENU_INDEX_DANCE
+        dance_sinking = (battle_phase == BATTLE_PHASE_EXCHANGE and _get_dancer_action() == 'マカダンス'
                          and battle_attacking_enemy_index == -1 and battle_turn_order[battle_turn_index] == -1
                          and battle_dance_phase == BATTLE_DANCE_PHASE_SINK)
         if dance_sinking:
@@ -3869,7 +3870,7 @@ def render_battle():
 
         # ★ ムチ（近接攻撃）：敵に接近 → 最接近で停止 → 元の位置へ後退
         # 接近・後退とも、進行方向の目的地に近づくほど減速する ease-out 補間（行きと帰りで共通の式 = 踊り子のズームアウト等と同じ手法）を用いる
-        whip_active = (battle_phase == BATTLE_PHASE_EXCHANGE and battle_menu_selected_index == BATTLE_MENU_INDEX_WHIP
+        whip_active = (battle_phase == BATTLE_PHASE_EXCHANGE and _get_dancer_action() not in ('炎', 'マカダンス')
                        and battle_attacking_enemy_index == -1 and battle_turn_order[battle_turn_index] == -1)
         if whip_active:
             if battle_whip_phase == BATTLE_WHIP_PHASE_APPROACH:
@@ -4464,19 +4465,19 @@ def render_battle():
     # ★ 攻撃選択サブウィンドウ（ズームアウト完了後・コマンド選択中のみ表示。攻防ステート中は非表示）
     if member_zoomout_frame >= BATTLE_MEMBER_ZOOMOUT_FRAMES:
         if battle_phase == BATTLE_PHASE_COMMAND_DANCER:
-            render_battle_menu(BATTLE_MENU_OPTIONS, battle_menu_selected_index, _CHARA_MASTER[1]['label'])
+            render_battle_menu(_CHARA_MASTER['Dancer']['actions'], battle_menu_selected_index, _CHARA_MASTER['Dancer']['label'])
         elif battle_phase == BATTLE_PHASE_COMMAND_SAMURAI:
-            render_battle_menu(get_samurai_menu_options(), battle_samurai_menu_selected_index, _CHARA_MASTER[2]['label'])
+            render_battle_menu(get_samurai_menu_options(), battle_samurai_menu_selected_index, _CHARA_MASTER['Samurai']['label'])
         elif battle_phase == BATTLE_PHASE_COMMAND_WARRIOR:
-            render_battle_menu(WARRIOR_MENU_OPTIONS, battle_warrior_menu_selected_index, _CHARA_MASTER[3]['label'])
+            render_battle_menu(_CHARA_MASTER['Warrior']['actions'], battle_warrior_menu_selected_index, _CHARA_MASTER['Warrior']['label'])
         elif battle_phase == BATTLE_PHASE_COMMAND_SISTER:
-            render_battle_menu(SISTER_MENU_OPTIONS, battle_sister_menu_selected_index, _CHARA_MASTER[4]['label'])
+            render_battle_menu(_CHARA_MASTER['Sister']['actions'], battle_sister_menu_selected_index, _CHARA_MASTER['Sister']['label'])
         elif battle_phase == BATTLE_PHASE_COMMAND_KUNOICHI:
-            render_battle_menu(KUNOICHI_MENU_OPTIONS, battle_kunoichi_menu_selected_index, _CHARA_MASTER[5]['label'])
+            render_battle_menu(_CHARA_MASTER['Kunoichi']['actions'], battle_kunoichi_menu_selected_index, _CHARA_MASTER['Kunoichi']['label'])
         elif battle_phase == BATTLE_PHASE_COMMAND_WIZARD:
-            render_battle_menu(WIZARD_MENU_OPTIONS, battle_wizard_menu_selected_index, _CHARA_MASTER[6]['label'])
+            render_battle_menu(_CHARA_MASTER['Wizard']['actions'], battle_wizard_menu_selected_index, _CHARA_MASTER['Wizard']['label'])
         elif battle_phase == BATTLE_PHASE_COMMAND_FIGHTER:
-            render_battle_menu(FIGHTER_MENU_OPTIONS, battle_fighter_menu_selected_index, _CHARA_MASTER[7]['label'])
+            render_battle_menu(_CHARA_MASTER['Fighter']['actions'], battle_fighter_menu_selected_index, _CHARA_MASTER['Fighter']['label'])
 
 # ---------------------------------------------------------
 # render_battle_menu()：攻撃選択サブウィンドウの描画
